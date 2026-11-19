@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { CartItem, Language, ProformaInvoiceData } from '../types';
+import { CartItem, Language, ProformaInvoiceData, EnquiryItem } from '../types';
 import { TRANSLATIONS } from '../data/translations';
+import { submitRfqEnquiry } from '../services/enquiryService';
 import {
   X,
   Printer,
@@ -67,6 +68,32 @@ export const ProformaModal: React.FC<ProformaModalProps> = ({
   };
 
   const handleWhatsAppShare = () => {
+    // Record proforma enquiry in database
+    const enquiryItems: EnquiryItem[] = items.map((it) => ({
+      productId: it.product.id,
+      productName: it.product.name,
+      quantity: it.quantity,
+      unit: it.product.unit,
+      unitPrice: it.product.price,
+      hsnCode: it.product.hsnCode,
+      totalPrice: it.product.price * it.quantity,
+    }));
+
+    submitRfqEnquiry(
+      {
+        customerName: formData.officerName || 'Government Procurement Officer',
+        mobileNumber: formData.phone || '+91 8886175855',
+        email: formData.email,
+        organisation: formData.panchayatName,
+        designation: formData.designation,
+        mandal: formData.mandal,
+        district: formData.district,
+        notes: `Official GST Proforma Ref: ${formData.invoiceNumber}. Buyer GSTIN: ${formData.buyerGstin}`,
+        source: 'proforma_invoice_generator',
+      },
+      enquiryItems
+    ).catch((err) => console.warn('Could not record proforma enquiry in DB:', err));
+
     let msg = `*KNR ENTERPRISES - PROFORMA ESTIMATE*\n`;
     msg += `Ref: ${formData.invoiceNumber} | Date: ${formData.date}\n`;
     msg += `Buyer: ${formData.panchayatName}, ${formData.mandal}\n`;

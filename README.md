@@ -45,6 +45,11 @@ Headquartered along the Chevella–Vikarabad highway in Ranga Reddy District, **
 5. **Guaranteed Dispatch Handlers:**
    - WhatsApp fast-track desk and automated email fallback to `knrenterprises679@gmail.com`.
 
+6. **Enterprise Admin Dashboard & CMS:**
+   - Accessible at `/admin` (or `#admin`) with secure Supabase Auth and database-level Row Level Security (RLS).
+   - Complete management for Products, Categories, Real-Time Inventory, Customer RFQ Enquiries, Homepage CMS, Testimonials, FAQs, Institutional Services, and Depot Settings.
+   - Built-in Supabase Storage integration for product and category image uploads.
+
 ---
 
 ## 🛠️ Technology Stack
@@ -98,6 +103,7 @@ npm run clean
 
 Detailed engineering documentation is maintained in the `docs/` directory:
 
+- [Admin Dashboard Setup & Operations Guide](docs/ADMIN_SETUP_GUIDE.md)
 - [Product Requirements Document (PRD)](docs/PRD.md)
 - [Technical Requirements Document (TRD)](docs/TRD.md)
 - [Codebase Bug Report & Remediation Log](docs/BUG_REPORT.md)

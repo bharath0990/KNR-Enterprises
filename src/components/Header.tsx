@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Screen, Language } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Screen, Language, Category } from '../types';
 import { Logo } from './Logo';
 import { Lock, ChevronDown, ShoppingCart, Menu, X, MessageCircle } from 'lucide-react';
-import { AdminLoginModal } from './AdminLoginModal';
+import { fetchCategories } from '../services/categoryService';
+import { useWebsiteSettings } from '../context/WebsiteSettingsContext';
 
 interface HeaderProps {
   currentScreen: Screen;
@@ -14,6 +15,7 @@ interface HeaderProps {
   onToggleLanguage: () => void;
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
+  onOpenAdmin?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -23,19 +25,27 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCart,
   language,
   onToggleLanguage,
+  onOpenAdmin,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsDropdownOpen, setProductsDropdownOpen] = useState(false);
-  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const { settings } = useWebsiteSettings();
 
-  const productCategories = [
-    { id: 'Disinfectants & Chemicals', label: 'Disinfectants & Chemicals' },
-    { id: 'Waste Management', label: 'Commercial Waste Bins' },
-    { id: 'Pest & Vector Control', label: 'Pest & Vector Foggers' },
-    { id: 'Municipal Infrastructure', label: 'Civic Smart LED Lighting' },
-    { id: 'Civic Landscaping', label: 'Artificial Green Turf' },
-    { id: 'Sanitization Tools', label: 'Sanitization Tools & PPE' },
-  ];
+  useEffect(() => {
+    fetchCategories().then((res) => {
+      setCategories(res.filter((c) => c.isActive));
+    });
+
+    const handleCatUpdate = () => {
+      fetchCategories().then((res) => {
+        setCategories(res.filter((c) => c.isActive));
+      });
+    };
+
+    window.addEventListener('knr_categories_updated', handleCatUpdate);
+    return () => window.removeEventListener('knr_categories_updated', handleCatUpdate);
+  }, []);
 
   const handleNavClick = (screen: Screen) => {
     onNavigate(screen);
@@ -44,7 +54,17 @@ export const Header: React.FC<HeaderProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleAdminClick = () => {
+    if (onOpenAdmin) {
+      onOpenAdmin();
+    } else {
+      window.location.hash = 'admin';
+    }
+    setMobileMenuOpen(false);
+  };
+
   const isActive = (screen: Screen) => currentScreen === screen;
+  const whatsappDigits = (settings?.whatsappNumber || '918886175855').replace(/[^0-9]/g, '');
 
   return (
     <>
@@ -115,7 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <div className="px-3 py-1.5 text-[11px] font-bold tracking-wider uppercase text-orange-400 border-b border-slate-800">
                         Product Categories
                       </div>
-                      {productCategories.map((cat) => (
+                      {categories.map((cat) => (
                         <button
                           key={cat.id}
                           onClick={() => {
@@ -124,8 +144,8 @@ export const Header: React.FC<HeaderProps> = ({
                           }}
                           className="w-full text-left px-3.5 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors flex items-center justify-between cursor-pointer"
                         >
-                          <span>{cat.label}</span>
-                          <span className="text-[10px] text-orange-400 font-mono">→</span>
+                          <span>{language === 'te' && cat.teluguName ? cat.teluguName : cat.name}</span>
+                          <span className="text-[10px] text-orange-400 font-mono">&rarr;</span>
                         </button>
                       ))}
                       <div className="p-2 border-t border-slate-800">
@@ -133,7 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
                           onClick={() => handleNavClick('products')}
                           className="w-full text-center py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 text-xs font-bold rounded-lg transition-colors cursor-pointer"
                         >
-                          View All Products →
+                          View All Products &rarr;
                         </button>
                       </div>
                     </div>
@@ -156,9 +176,9 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* 3. Right: WhatsApp CTA "Contact Us" + Admin & Cart Controls */}
             <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
-              {/* WhatsApp CTA Button: "Contact Us" (Responsive text: "Chat" on <380px, "Contact Us" on 380px+) */}
+              {/* WhatsApp CTA Button: "Contact Us" */}
               <a
-                href="https://wa.me/918886175855?text=Hello%20KNR%20Enterprises,%20I%20would%20like%20to%20enquire%20about%20your%20products%20and%20supplies"
+                href={`https://wa.me/${whatsappDigits}?text=Hello%20KNR%20Enterprises,%20I%20would%20like%20to%20enquire%20about%20your%20products%20and%20supplies`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm px-2.5 sm:px-4 lg:px-5 py-1.5 sm:py-2 rounded-full shadow-md shadow-orange-500/25 flex items-center gap-1 sm:gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
@@ -195,12 +215,12 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </button>
 
-              {/* Admin Portal Button (Desktop/Tablet top bar; on mobile, available in Mobile Menu) */}
+              {/* Admin Portal Button */}
               <button
-                onClick={() => setIsAdminModalOpen(true)}
+                onClick={handleAdminClick}
                 className="hidden sm:inline-flex p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800/80 transition-colors cursor-pointer"
-                title="Administrator Login"
-                aria-label="Admin Login"
+                title="Administrator Portal"
+                aria-label="Admin Portal"
               >
                 <Lock className="w-4 h-4" />
               </button>
@@ -264,7 +284,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Mobile WhatsApp CTA */}
             <div className="pt-2">
               <a
-                href="https://wa.me/918886175855?text=Hello%20KNR%20Enterprises,%20I%20would%20like%20to%20enquire%20about%20your%20products%20and%20supplies"
+                href={`https://wa.me/${whatsappDigits}?text=Hello%20KNR%20Enterprises,%20I%20would%20like%20to%20enquire%20about%20your%20products%20and%20supplies`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm"
@@ -282,25 +302,16 @@ export const Header: React.FC<HeaderProps> = ({
                 {language === 'en' ? 'తెలుగు వెర్షన్' : 'English Version'}
               </button>
               <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  setIsAdminModalOpen(true);
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-xs text-slate-300"
+                onClick={handleAdminClick}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-xs text-slate-300 hover:text-white"
               >
                 <Lock className="w-3 h-3 text-orange-400" />
-                <span>Admin Login</span>
+                <span>Admin Dashboard</span>
               </button>
             </div>
           </div>
         )}
       </header>
-
-      {/* Interactive Admin Login Modal */}
-      <AdminLoginModal
-        isOpen={isAdminModalOpen}
-        onClose={() => setIsAdminModalOpen(false)}
-      />
     </>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { CartItem, Language } from '../types';
+import { CartItem, Language, EnquiryItem } from '../types';
 import {
   X,
   Plus,
@@ -7,8 +7,10 @@ import {
   Trash2,
   ShoppingCart,
   ArrowRight,
-  MessageCircle
+  MessageCircle,
 } from 'lucide-react';
+import { submitRfqEnquiry } from '../services/enquiryService';
+import { useWebsiteSettings } from '../context/WebsiteSettingsContext';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -29,9 +31,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
+  onOpenProforma,
   language,
   onBrowseProducts,
 }) => {
+  const { settings } = useWebsiteSettings();
   if (!isOpen) return null;
 
   const subtotal = items.reduce(
@@ -41,8 +45,40 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const gstAmount = Math.round(subtotal * 0.18);
   const totalAmount = subtotal + gstAmount;
 
-  const handleWhatsAppCheckout = () => {
+  const whatsappPhone = (settings?.whatsappNumber || '918886175855').replace(/[^0-9]/g, '');
+
+  const handleWhatsAppCheckout = async () => {
+    // 1. Record enquiry in Supabase database
+    const enquiryItems: EnquiryItem[] = items.map((it) => ({
+      productId: it.product.id,
+      productName: it.product.name,
+      quantity: it.quantity,
+      unit: it.product.unit,
+      unitPrice: it.product.price,
+      hsnCode: it.product.hsnCode,
+      totalPrice: it.product.price * it.quantity,
+    }));
+
+    let refNumber = '';
+    try {
+      const saved = await submitRfqEnquiry(
+        {
+          customerName: 'Online Procurement Client',
+          mobileNumber: '+91 (WhatsApp Dispatch)',
+          organisation: 'Gram Panchayat / Institutional Tender',
+          source: 'cart_whatsapp',
+          notes: 'Customer initiated tender basket quote on WhatsApp',
+        },
+        enquiryItems
+      );
+      refNumber = saved.enquiryNumber;
+    } catch (err) {
+      console.warn('Could not record enquiry in DB:', err);
+    }
+
+    // 2. Open WhatsApp desk
     let message = `*KNR ENTERPRISES - ORDER ENQUIRY*\n`;
+    if (refNumber) message += `*Ref: ${refNumber}*\n`;
     message += `=======================================\n`;
     items.forEach((item, index) => {
       const lineTotal = item.product.price * item.quantity;
@@ -56,7 +92,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     message += `Please confirm stock availability and dispatch timeline to our location.`;
 
     const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/918886175855?text=${encoded}`, '_blank', 'noopener,noreferrer');
+    window.open(`https://wa.me/${whatsappPhone}?text=${encoded}`, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -98,155 +134,147 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
             {items.length === 0 ? (
               <div className="py-16 text-center px-4">
-                <div className="w-16 h-16 mx-auto mb-4 bg-orange-50 rounded-full flex items-center justify-center text-orange-500">
-                  <ShoppingCart className="w-8 h-8 opacity-60" />
+                <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4">
+                  <ShoppingCart className="w-8 h-8" />
                 </div>
                 <h4 className="font-bold text-slate-800 text-base">
-                  {language === 'te' ? 'కార్ట్ ఖాళీగా ఉంది' : 'Your Cart is Empty'}
+                  Your cart is empty
                 </h4>
-                <p className="text-xs text-slate-500 mt-2 max-w-xs mx-auto leading-relaxed">
-                  {language === 'te'
-                    ? 'ఉత్పత్తుల కేటలాగ్ నుండి వస్తువులను మీ కార్ట్‌కు జోడించండి.'
-                    : 'Explore our product range and add items directly to your cart for instant WhatsApp checkout.'}
+                <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                  Add wholesale items from our catalog to calculate GST estimates and request institutional quotes.
                 </p>
                 <button
                   onClick={() => {
                     onClose();
                     onBrowseProducts();
                   }}
-                  className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-orange-500/20 transition-all cursor-pointer"
+                  className="mt-5 px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs rounded-full shadow-md transition-colors cursor-pointer"
                 >
-                  <span>{language === 'te' ? 'ఉత్పత్తులను చూడండి' : 'Explore Products'}</span>
-                  <ArrowRight className="w-4 h-4" />
+                  Browse Products
                 </button>
               </div>
             ) : (
-              <>
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                  <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                    Selected Items ({items.length})
-                  </span>
-                  <button
-                    onClick={onClearCart}
-                    className="text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Clear Cart</span>
-                  </button>
-                </div>
+              <div className="space-y-3">
+                {items.map((item) => {
+                  const lineTotal = item.product.price * item.quantity;
+                  const isBelowMoq = item.quantity < item.product.moq;
 
-                {/* Items List */}
-                <div className="space-y-3">
-                  {items.map(({ product, quantity }) => (
+                  return (
                     <div
-                      key={product.id}
-                      className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition-all shadow-xs"
+                      key={item.product.id}
+                      className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2"
                     >
-                      <div className="flex gap-3">
+                      <div className="flex items-start gap-3">
                         <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-16 h-16 rounded-xl object-cover bg-slate-100 shrink-0 border border-slate-200"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = '/hero-knr-products.jpg';
-                          }}
+                          src={item.product.image}
+                          alt={item.product.name}
+                          className="w-12 h-12 rounded-lg object-cover bg-white border border-slate-200 shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug line-clamp-2">
-                            {product.name}
+                          <h4 className="font-bold text-slate-900 text-xs sm:text-sm truncate">
+                            {item.product.name}
                           </h4>
-                          <div className="flex items-center justify-between mt-1.5">
-                            <span className="text-xs text-slate-500">
-                              ₹{product.price.toLocaleString('en-IN')}{' '}
-                              <span className="text-[10px]">/ {product.unit}</span>
-                            </span>
-                            <span className="text-xs font-bold text-orange-600">
-                              ₹{(product.price * quantity).toLocaleString('en-IN')}
-                            </span>
-                          </div>
+                          <p className="text-[11px] text-slate-500 font-mono">
+                            ₹{item.product.price.toLocaleString('en-IN')} / {item.product.unit}
+                          </p>
                         </div>
+
+                        <button
+                          onClick={() => onRemoveItem(item.product.id)}
+                          className="text-slate-400 hover:text-rose-500 p-1 rounded-md transition-colors cursor-pointer"
+                          title="Remove item"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
 
-                      {/* Quantity Controls & Remove */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                        <div className="flex items-center border border-slate-200 rounded-lg bg-slate-50">
+                      {/* Quantity & Line Total */}
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                        <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-0.5">
                           <button
                             onClick={() =>
-                              onUpdateQuantity(product.id, Math.max(1, quantity - 1))
+                              onUpdateQuantity(item.product.id, item.quantity - 1)
                             }
-                            className="p-1.5 hover:bg-slate-200 rounded-l-lg text-slate-600 cursor-pointer transition-colors"
+                            className="p-1 hover:bg-slate-100 rounded text-slate-600 cursor-pointer"
                             aria-label="Decrease quantity"
                           >
                             <Minus className="w-3.5 h-3.5" />
                           </button>
-                          <span className="px-3 text-xs font-bold text-slate-800 min-w-[28px] text-center">
-                            {quantity}
+                          <span className="w-8 text-center font-mono font-bold text-xs text-slate-800">
+                            {item.quantity}
                           </span>
                           <button
                             onClick={() =>
-                              onUpdateQuantity(product.id, quantity + 1)
+                              onUpdateQuantity(item.product.id, item.quantity + 1)
                             }
-                            className="p-1.5 hover:bg-slate-200 rounded-r-lg text-slate-600 cursor-pointer transition-colors"
+                            className="p-1 hover:bg-slate-100 rounded text-slate-600 cursor-pointer"
                             aria-label="Increase quantity"
                           >
                             <Plus className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
-                        <button
-                          onClick={() => onRemoveItem(product.id)}
-                          className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 cursor-pointer transition-colors"
-                          title="Remove item"
-                          aria-label="Remove item"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="text-right">
+                          <span className="font-mono font-bold text-sm text-slate-900">
+                            ₹{lineTotal.toLocaleString('en-IN')}
+                          </span>
+                        </div>
                       </div>
+
+                      {isBelowMoq && (
+                        <div className="text-[10px] text-amber-700 bg-amber-50 p-1.5 rounded-md font-medium">
+                          Note: Depot MOQ is {item.product.moq} {item.product.unit}. Smaller quantities require depot confirmation.
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </>
+                  );
+                })}
+              </div>
             )}
           </div>
 
-          {/* Footer Calculations & Direct WhatsApp Checkout Action */}
+          {/* Footer Calculations & Action Buttons */}
           {items.length > 0 && (
             <div className="p-5 bg-slate-50 border-t border-slate-200 space-y-3">
               <div className="space-y-1.5 text-xs text-slate-600">
                 <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span className="font-semibold text-slate-800">
+                  <span>Taxable Subtotal:</span>
+                  <span className="font-mono font-bold text-slate-800">
                     ₹{subtotal.toLocaleString('en-IN')}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Estimated GST (18%)</span>
-                  <span className="font-semibold text-slate-800">
+                  <span>Estimated GST (18%):</span>
+                  <span className="font-mono font-bold text-slate-800">
                     ₹{gstAmount.toLocaleString('en-IN')}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm font-bold text-slate-900 pt-2 border-t border-slate-200">
-                  <span>Total Amount</span>
-                  <span className="text-orange-600 text-base font-black">
+                <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t border-slate-200">
+                  <span>Estimated Total:</span>
+                  <span className="font-mono text-orange-600">
                     ₹{totalAmount.toLocaleString('en-IN')}
                   </span>
                 </div>
               </div>
 
-              {/* Direct WhatsApp Checkout Button */}
-              <div className="pt-2">
+              <div className="space-y-2 pt-1">
                 <button
                   onClick={handleWhatsAppCheckout}
-                  className="w-full bg-[#25D366] hover:bg-[#20ba59] active:bg-[#1da850] text-white font-bold py-3.5 px-5 rounded-xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2.5 text-sm sm:text-base transition-all hover:scale-[1.01] active:scale-95 cursor-pointer"
+                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm py-3 px-4 rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
                 >
-                  <MessageCircle className="w-5 h-5 text-white" />
-                  <span>Checkout on WhatsApp</span>
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Order on WhatsApp</span>
                 </button>
-              </div>
 
-              <div className="pt-1 text-center text-[11px] text-slate-400">
-                Opens WhatsApp with your prefilled order items for instant confirmation from KNR Enterprises (+91 8886175855).
+                {onOpenProforma && (
+                  <button
+                    onClick={onOpenProforma}
+                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>Generate Proforma Invoice</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           )}

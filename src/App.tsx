@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Screen, Language, CartItem, Product } from './types';
-import { PRODUCTS } from './data/products';
 import { CatalogItem, catalogItemToProduct } from './services/productService';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -10,9 +9,31 @@ import { HomeScreen } from './components/Screens/HomeScreen';
 import { CatalogScreen } from './components/Screens/CatalogScreen';
 import { AboutScreen } from './components/Screens/AboutScreen';
 import { ContactScreen } from './components/Screens/ContactScreen';
-import { MessageCircle, ArrowUp, Home, Package, Info, ShoppingCart, PhoneCall } from 'lucide-react';
+import { AdminApp } from './admin/AdminApp';
+import { AuthProvider } from './context/AuthContext';
+import { WebsiteSettingsProvider, useWebsiteSettings } from './context/WebsiteSettingsContext';
+import {
+  MessageCircle,
+  ArrowUp,
+  Home,
+  Package,
+  Info,
+  ShoppingCart,
+  PhoneCall,
+  Bell,
+  AlertTriangle,
+  Lock,
+} from 'lucide-react';
+import { Logo } from './components/Logo';
 
-export default function App() {
+function AppContent() {
+  const { settings } = useWebsiteSettings();
+  const [isAdminRoute, setIsAdminRoute] = useState<boolean>(() => {
+    const hash = window.location.hash.toLowerCase();
+    const path = window.location.pathname.toLowerCase();
+    return hash.startsWith('#admin') || path.startsWith('/admin');
+  });
+
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [language, setLanguage] = useState<Language>('en');
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -21,7 +42,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  // Initial cart with items validated from localStorage or default mockups
+  // Cart items validated from localStorage
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem('knr_cart_items');
@@ -43,7 +64,7 @@ export default function App() {
         }
       }
     } catch {
-      // fallback to empty cart on corrupt storage
+      // fallback to empty cart
     }
     return [];
   });
@@ -57,7 +78,7 @@ export default function App() {
     }
   }, [cartItems]);
 
-  // Handle scroll to top button visibility
+  // Scroll to top button visibility
   useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 400);
@@ -66,34 +87,45 @@ export default function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Listen to hash and pathname changes (Only 4 public pages: home, about, products, contact)
-  // Automatically redirects /enquiry or #enquiry to #contact
+  // Listen to hash and pathname changes
   useEffect(() => {
-    const resolveScreen = (target: string): Screen => {
+    const handleRoute = () => {
+      const hash = window.location.hash.toLowerCase();
+      const path = window.location.pathname.toLowerCase();
+
+      if (hash.startsWith('#admin') || path.startsWith('/admin')) {
+        setIsAdminRoute(true);
+        return;
+      }
+
+      setIsAdminRoute(false);
+
+      const target = window.location.hash || window.location.pathname;
       const clean = target.replace(/^#|\//g, '').toLowerCase();
+
       if (clean === 'enquiry') {
         window.location.hash = 'contact';
-        return 'contact';
+        setCurrentScreen('contact');
+        return;
       }
-      if (['home', 'about', 'products', 'contact'].includes(clean)) {
-        return clean as Screen;
-      }
-      return 'home';
-    };
 
-    const handleRoute = () => {
-      const target = window.location.hash || window.location.pathname;
-      const screen = resolveScreen(target);
-      setCurrentScreen(screen);
+      if (['home', 'about', 'products', 'contact'].includes(clean)) {
+        setCurrentScreen(clean as Screen);
+      } else {
+        setCurrentScreen('home');
+      }
     };
 
     handleRoute();
     window.addEventListener('hashchange', handleRoute);
-    return () => window.removeEventListener('hashchange', handleRoute);
+    window.addEventListener('popstate', handleRoute);
+    return () => {
+      window.removeEventListener('hashchange', handleRoute);
+      window.removeEventListener('popstate', handleRoute);
+    };
   }, []);
 
   const handleNavigate = (screen: Screen) => {
-    // If navigating to legacy enquiry, redirect directly to contact
     const targetScreen = (screen as string) === 'enquiry' ? 'contact' : screen;
     setCurrentScreen(targetScreen);
     window.location.hash = targetScreen;
@@ -140,8 +172,83 @@ export default function App() {
     setLanguage((prev) => (prev === 'en' ? 'te' : 'en'));
   };
 
+  // If URL is /admin or #admin, render AdminApp
+  if (isAdminRoute) {
+    return (
+      <AdminApp
+        onBackToWebsite={() => {
+          setIsAdminRoute(false);
+          window.location.hash = 'home';
+        }}
+      />
+    );
+  }
+
+  // Maintenance mode active for public visitors (Administrators can still access /admin/login)
+  if (settings?.maintenanceMode) {
+    return (
+      <div className="min-h-screen bg-[#070b12] text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md space-y-6">
+          <div className="flex justify-center">
+            <Logo variant="dark" className="h-10 w-auto" />
+          </div>
+
+          <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-white">
+              Scheduled System Maintenance
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              {settings.maintenanceMessage ||
+                'We are currently performing scheduled system updates. For urgent wholesale orders, please call depot dispatch directly.'}
+            </p>
+          </div>
+
+          <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl text-xs space-y-2">
+            <div className="text-slate-400 font-bold uppercase text-[10px]">
+              Direct Depot Dispatch Hotlines
+            </div>
+            <div className="font-mono text-slate-200">
+              <a href={`tel:${settings.phonePrimary}`} className="text-orange-400 font-bold hover:underline">
+                {settings.phonePrimary} (K. Narendar Reddy)
+              </a>
+            </div>
+            <div className="font-mono text-slate-200">
+              <a href={`tel:${settings.phoneSecondary}`} className="text-orange-400 font-bold hover:underline">
+                {settings.phoneSecondary} (G. Siva)
+              </a>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-800/80">
+            <a
+              href="#admin"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Administrator Sign In</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const whatsappPhone = (settings?.whatsappNumber || '918886175855').replace(/[^0-9]/g, '');
+
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-orange-500/20 selection:text-orange-600">
+      {/* 0. Website Announcement Banner (if enabled in Admin Settings) */}
+      {settings?.announcementBannerEnabled && settings?.announcementBannerText && (
+        <div className="bg-gradient-to-r from-orange-600 via-amber-600 to-orange-600 text-white text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-2 shadow-inner print:hidden">
+          <Bell className="w-3.5 h-3.5 shrink-0 animate-bounce" />
+          <span>{settings.announcementBannerText}</span>
+        </div>
+      )}
+
       {/* Shared Header Navigation */}
       <Header
         currentScreen={currentScreen}
@@ -152,6 +259,10 @@ export default function App() {
         onToggleLanguage={handleToggleLanguage}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        onOpenAdmin={() => {
+          setIsAdminRoute(true);
+          window.location.hash = 'admin';
+        }}
       />
 
       {/* Main Screen Views: Exactly 4 Public Pages */}
@@ -203,7 +314,6 @@ export default function App() {
 
       {/* Mobile Web Application App Bar (4 Public Pages + Cart) */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0e17]/95 backdrop-blur-md border-t border-slate-800 md:hidden py-1.5 px-2 flex items-center justify-around shadow-2xl print:hidden text-white">
-        {/* Home */}
         <button
           onClick={() => handleNavigate('home')}
           className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 cursor-pointer transition-colors ${
@@ -214,7 +324,6 @@ export default function App() {
           <span className="text-[10px] mt-0.5">{language === 'te' ? 'హోమ్' : 'Home'}</span>
         </button>
 
-        {/* About */}
         <button
           onClick={() => handleNavigate('about')}
           className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 cursor-pointer transition-colors ${
@@ -225,7 +334,6 @@ export default function App() {
           <span className="text-[10px] mt-0.5">{language === 'te' ? 'గురించి' : 'About'}</span>
         </button>
 
-        {/* Products */}
         <button
           onClick={() => handleNavigate('products')}
           className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 cursor-pointer transition-colors ${
@@ -236,7 +344,6 @@ export default function App() {
           <span className="text-[10px] mt-0.5">{language === 'te' ? 'ఉత్పత్తులు' : 'Products'}</span>
         </button>
 
-        {/* Contact */}
         <button
           onClick={() => handleNavigate('contact')}
           className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 cursor-pointer transition-colors ${
@@ -247,7 +354,6 @@ export default function App() {
           <span className="text-[10px] mt-0.5">{language === 'te' ? 'కాంటాక్ట్' : 'Contact'}</span>
         </button>
 
-        {/* Cart */}
         <button
           onClick={() => setIsCartOpen(true)}
           className="relative min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 cursor-pointer text-slate-400 hover:text-orange-500 transition-colors"
@@ -289,7 +395,7 @@ export default function App() {
 
       {/* Floating WhatsApp Action Button */}
       <a
-        href="https://wa.me/918886175855?text=Hello%20KNR%20Enterprises,%20I%20would%20like%20to%20enquire%20about%20your%20supplies"
+        href={`https://wa.me/${whatsappPhone}?text=Hello%20KNR%20Enterprises,%20I%20would%20like%20to%20enquire%20about%20your%20supplies`}
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white p-3.5 rounded-full shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex items-center justify-center cursor-pointer group print:hidden"
@@ -314,5 +420,15 @@ export default function App() {
         </button>
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <WebsiteSettingsProvider>
+        <AppContent />
+      </WebsiteSettingsProvider>
+    </AuthProvider>
   );
 }

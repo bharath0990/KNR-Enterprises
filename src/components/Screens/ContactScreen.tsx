@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Screen, Language } from '../../types';
 import {
   Phone,
@@ -9,8 +9,13 @@ import {
   Users,
   Scale,
   Handshake,
-  ArrowRight
+  ArrowRight,
+  Send,
+  CheckCircle2,
+  FileText,
 } from 'lucide-react';
+import { useWebsiteSettings } from '../../context/WebsiteSettingsContext';
+import { submitRfqEnquiry } from '../../services/enquiryService';
 
 interface ContactScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -18,39 +23,107 @@ interface ContactScreenProps {
 }
 
 export const ContactScreen: React.FC<ContactScreenProps> = () => {
+  const { settings } = useWebsiteSettings();
+
+  const phone1 = settings?.phonePrimary || '+91 8886175855';
+  const phone2 = settings?.phoneSecondary || '+91 9640195798';
+  const email = settings?.officialEmail || 'knrenterprises679@gmail.com';
+  const gstin = settings?.gstin || '36CUHPK5939D1ZG';
+  const address = settings?.depotAddress || 'H.No: 1-77/6, Near HP Petrol Pump, Mdl & Vill Chevella, Ranga Reddy, Telangana 501503';
+  const whatsappDigits = (settings?.whatsappNumber || '918886175855').replace(/[^0-9]/g, '');
+
   const googleMapsUrl =
     'https://www.google.com/maps/search/?api=1&query=Near+HP+Petrol+Pump+Chevella+Telangana+501503';
+
+  // RFQ Form state
+  const [officerName, setOfficerName] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [organisation, setOrganisation] = useState('');
+  const [mandal, setMandal] = useState('');
+  const [district, setDistrict] = useState('');
+  const [requirements, setRequirements] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState<{ ref: string } | null>(null);
+
+  const handleSubmitRfq = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!officerName.trim() || !mobileNumber.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      const enq = await submitRfqEnquiry(
+        {
+          customerName: officerName.trim(),
+          mobileNumber: mobileNumber.trim(),
+          email: emailInput.trim(),
+          organisation: organisation.trim(),
+          mandal: mandal.trim(),
+          district: district.trim(),
+          notes: requirements.trim(),
+          source: 'contact_page_form',
+        },
+        [
+          {
+            productName: requirements.trim() || 'Wholesale Material Enquiry',
+            quantity: 1,
+            unit: 'lot',
+            unitPrice: 0,
+            totalPrice: 0,
+          },
+        ]
+      );
+
+      setSubmitSuccess({ ref: enq.enquiryNumber });
+
+      // Launch WhatsApp with prefilled enquiry
+      const message = `Hello KNR Enterprises,\nI have submitted an RFQ enquiry ref: *${enq.enquiryNumber}*.\nName: ${officerName}\nOrganisation: ${organisation || 'N/A'}\nLocation: ${mandal}, ${district}\nRequirements: ${requirements}\nPlease share price quotation and stock availability.`;
+      window.open(
+        `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(message)}`,
+        '_blank',
+        'noopener,noreferrer'
+      );
+
+      setOfficerName('');
+      setMobileNumber('');
+      setEmailInput('');
+      setOrganisation('');
+      setMandal('');
+      setDistrict('');
+      setRequirements('');
+    } catch (err) {
+      alert(`Error submitting enquiry: ${err}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const contactCards = [
     {
       id: 'call-us',
       title: 'Call Us',
       icon: Phone,
-      lines: ['+91 8886175855', '+91 9640195798'],
+      lines: [phone1, phone2],
       btnText: 'Call Now',
       btnIcon: Phone,
-      btnHref: 'tel:8886175855',
+      btnHref: `tel:${phone1.replace(/[^0-9+]/g, '')}`,
       isExternal: false,
     },
     {
       id: 'email-us',
       title: 'Email Us',
       icon: Mail,
-      lines: ['knrenterprises679@gmail.com'],
+      lines: [email],
       btnText: 'Send Email',
       btnIcon: Mail,
-      btnHref: 'mailto:knrenterprises679@gmail.com',
+      btnHref: `mailto:${email}`,
       isExternal: false,
     },
     {
       id: 'visit-us',
       title: 'Visit Us',
       icon: MapPin,
-      lines: [
-        'H.No: 1-77/6, Near HP Petrol Pump,',
-        'Mdl & Vill Chevella,',
-        'Ranga Reddy, Telangana 501503, India.'
-      ],
+      lines: [address],
       btnText: 'Get Directions',
       btnIcon: MapPin,
       btnHref: googleMapsUrl,
@@ -61,12 +134,11 @@ export const ContactScreen: React.FC<ContactScreenProps> = () => {
       title: 'WhatsApp',
       icon: MessageCircle,
       lines: [
-        'Contact KNR Enterprises directly for product enquiries and business discussions.'
+        'Contact KNR Enterprises directly for product enquiries and tender discussions.'
       ],
       btnText: 'Chat on WhatsApp',
       btnIcon: MessageCircle,
-      btnHref:
-        'https://wa.me/918886175855?text=Hello%20KNR%20Enterprises,%20I%20would%20like%20to%20enquire%20about%20your%20products%20and%20supplies',
+      btnHref: `https://wa.me/${whatsappDigits}?text=Hello%20KNR%20Enterprises,%20I%20would%20like%20to%20enquire%20about%20your%20products%20and%20supplies`,
       isExternal: true,
     },
   ];
@@ -74,52 +146,38 @@ export const ContactScreen: React.FC<ContactScreenProps> = () => {
   return (
     <div className="w-full bg-[#f8f9fc] text-slate-900 selection:bg-orange-500/20 selection:text-orange-600">
       {/* =========================================================================
-          1. HERO SECTION (Dark theme matching reference image)
+          1. HERO SECTION
          ========================================================================= */}
       <section className="relative bg-[#0a0e17] text-white pt-8 sm:pt-12 pb-16 sm:pb-20 border-b border-slate-800/80 overflow-hidden">
-        {/* Subtle ambient glow */}
         <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-            {/* Left Content (7 cols) */}
             <div className="lg:col-span-7 space-y-3.5 text-left">
-              {/* Overline Badge */}
               <div className="text-orange-400 font-bold text-xs sm:text-sm tracking-wider uppercase">
                 GET IN TOUCH
               </div>
 
-              {/* Main Headline */}
               <h1 className="text-2xl min-[360px]:text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tight leading-[1.12]">
                 Let's Connect and<br />
                 Discuss <span className="text-orange-500">Your Requirements.</span>
               </h1>
 
-              {/* Description */}
               <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed max-w-lg pt-1">
-                Have a product requirement or need more information?<br className="hidden sm:inline" />
-                Get in touch with KNR Enterprises. We're ready to hear about your requirements.
+                Have a wholesale product requirement or need statutory GST proforma estimates for Gram Panchayat or municipal token sanctions?
               </p>
-
-              {/* Small Orange Underline Accent Bar */}
-              <div className="w-16 h-1 bg-orange-500 rounded-full mt-4" />
             </div>
 
-            {/* Right Industrial Facility Photography (5 cols) */}
             <div className="lg:col-span-5 relative flex items-center justify-center lg:justify-end">
-              <div className="relative w-full max-w-md lg:max-w-lg rounded-2xl overflow-hidden shadow-2xl border border-slate-800/80 bg-slate-900 group">
+              <div className="relative w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900">
                 <img
-                  src="/contact-hero-plant.jpg"
-                  alt="KNR Enterprises Industrial Facility"
-                  className="w-full h-auto aspect-[16/10] object-cover transition-transform duration-700 group-hover:scale-105"
+                  src="/building-knr-hq.jpg"
+                  alt="KNR Enterprises Chevella Central Depot"
+                  className="w-full h-auto aspect-[16/10] object-cover"
                   onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    if (target.src.indexOf('building-knr-hq.jpg') === -1) {
-                      target.src = '/building-knr-hq.jpg';
-                    }
+                    (e.target as HTMLImageElement).src = '/hero-knr-products.jpg';
                   }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0a0e17]/50 via-transparent to-transparent pointer-events-none" />
               </div>
             </div>
           </div>
@@ -127,30 +185,28 @@ export const ContactScreen: React.FC<ContactScreenProps> = () => {
       </section>
 
       {/* =========================================================================
-          2. FOUR CONTACT INFORMATION CARDS
+          2. CONTACT METHODS CARDS
          ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 pb-12 sm:pb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {contactCards.map((card) => {
             const Icon = card.icon;
             const BtnIcon = card.btnIcon;
+
             return (
               <div
                 key={card.id}
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all duration-300 p-5 sm:p-6 flex flex-col justify-between"
+                className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xl p-5 sm:p-6 flex flex-col justify-between hover:shadow-2xl hover:border-slate-300 transition-all group"
               >
                 <div>
-                  {/* Top Orange Circle Icon */}
-                  <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-sm mb-3.5">
-                    <Icon className="w-5 h-5 text-white stroke-[2.2]" />
+                  <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-orange-500 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300">
+                    <Icon className="w-6 h-6" />
                   </div>
 
-                  {/* Title */}
-                  <h3 className="text-base sm:text-lg font-bold text-[#0f172a] tracking-tight">
+                  <h3 className="text-base sm:text-lg font-bold text-[#0f172a] mt-4 tracking-tight">
                     {card.title}
                   </h3>
 
-                  {/* Content Lines */}
                   <div className="mt-2 space-y-1">
                     {card.lines.map((line, idx) => (
                       <p
@@ -165,7 +221,6 @@ export const ContactScreen: React.FC<ContactScreenProps> = () => {
                   </div>
                 </div>
 
-                {/* Bottom Action Button */}
                 <a
                   href={card.btnHref}
                   target={card.isExternal ? '_blank' : undefined}
@@ -182,24 +237,171 @@ export const ContactScreen: React.FC<ContactScreenProps> = () => {
       </section>
 
       {/* =========================================================================
-          3. FIND US / LOCATION SECTION (Left details, right map graphic)
+          3. INSTITUTIONAL PROCUREMENT RFQ FORM SECTION
+         ========================================================================= */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 sm:pb-16">
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-10">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-8">
+              <span className="text-orange-500 font-bold text-xs uppercase tracking-wider block mb-1">
+                Direct Tender &amp; Wholesale RFQ
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Submit Your Product Requirement
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                Your enquiry will be recorded directly into our depot procurement database with instant proforma estimate support
+              </p>
+            </div>
+
+            {submitSuccess && (
+              <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-800 text-xs sm:text-sm font-semibold animate-fadeIn">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <div>
+                  <p>Enquiry submitted successfully! Reference: <strong>{submitSuccess.ref}</strong></p>
+                  <p className="text-[11px] text-emerald-700 mt-0.5">
+                    Our team will verify stock and contact you within 15 minutes.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitRfq} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Officer / Contractor Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={officerName}
+                    onChange={(e) => setOfficerName(e.target.value)}
+                    placeholder="e.g. K. Rajesh (Sarpanch / Contractor)"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Mobile Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={mobileNumber}
+                    onChange={(e) => setMobileNumber(e.target.value)}
+                    placeholder="+91 98765 43210"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-mono text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Official Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    placeholder="panchayat.chevella@telangana.gov.in"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Organisation / Panchayat / Firm
+                  </label>
+                  <input
+                    type="text"
+                    value={organisation}
+                    onChange={(e) => setOrganisation(e.target.value)}
+                    placeholder="e.g. Gram Panchayat Chevella"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Mandal
+                  </label>
+                  <input
+                    type="text"
+                    value={mandal}
+                    onChange={(e) => setMandal(e.target.value)}
+                    placeholder="e.g. Chevella Mandal"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    District
+                  </label>
+                  <input
+                    type="text"
+                    value={district}
+                    onChange={(e) => setDistrict(e.target.value)}
+                    placeholder="e.g. Ranga Reddy / Vikarabad"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Required Wholesale Products &amp; Slabs *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={requirements}
+                  onChange={(e) => setRequirements(e.target.value)}
+                  placeholder="Specify product items (e.g. 20 bags Grade 1 Bleaching Powder, 4 wheeled dustbins, 2 fogging machines) and target delivery timeline..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full mt-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-sm py-3 px-6 rounded-xl shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span>Submit RFQ &amp; Open WhatsApp Desk</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          4. FIND US / LOCATION SECTION
          ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-14">
         <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-8 lg:p-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-            {/* Left Content (5 cols) */}
             <div className="lg:col-span-5 space-y-4">
               <div className="flex items-center">
                 <span className="w-1.5 h-7 bg-orange-500 rounded-full inline-block mr-2.5" />
                 <h2 className="text-2xl sm:text-3xl font-black text-[#0f172a] tracking-tight">
-                  Find Us
+                  Find Our Depot
                 </h2>
               </div>
 
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-sm pt-1">
-                H.No: 1-77/6, Near HP Petrol Pump,<br />
-                Mdl &amp; Vill Chevella, Ranga Reddy,<br />
-                Telangana 501503, India.
+                {address}
               </p>
 
               <div className="pt-2">
@@ -216,7 +418,6 @@ export const ContactScreen: React.FC<ContactScreenProps> = () => {
               </div>
             </div>
 
-            {/* Right Map Image Graphic with Marker (7 cols) */}
             <div className="lg:col-span-7">
               <a
                 href={googleMapsUrl}
@@ -230,7 +431,6 @@ export const ContactScreen: React.FC<ContactScreenProps> = () => {
                   alt="KNR Enterprises Chevella Location Map"
                   className="w-full h-auto aspect-[16/9] object-cover transition-transform duration-500 group-hover:scale-105"
                   onError={(e) => {
-                    // Fallback to iframe if image is missing
                     const parent = (e.target as HTMLElement).parentElement;
                     if (parent) {
                       parent.innerHTML = `<iframe src="https://maps.google.com/maps?q=HP+Petrol+Pump,+Chevella,+Telangana+501503&t=&z=14&ie=UTF8&iwloc=&output=embed" class="w-full h-64 border-0 rounded-2xl"></iframe>`;
@@ -248,71 +448,17 @@ export const ContactScreen: React.FC<ContactScreenProps> = () => {
       </section>
 
       {/* =========================================================================
-          4. CTA BANNER ("Have a Requirement? Let's Talk.")
-         ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-14">
-        <div className="bg-[#0c1322] text-white rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden border border-slate-800">
-          {/* Background Industrial Plant Silhouette */}
-          <div
-            className="absolute inset-0 bg-cover bg-right opacity-20 pointer-events-none"
-            style={{ backgroundImage: `url('/contact-cta-bg.jpg')` }}
-          />
-
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
-            {/* Left Handshake Icon + Heading */}
-            <div className="flex items-center gap-4 sm:gap-5">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center shrink-0">
-                <Handshake className="w-6 h-6 sm:w-7 sm:h-7 text-orange-500" />
-              </div>
-              <div>
-                <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
-                  Have a Requirement? <span className="text-orange-500">Let's Talk.</span>
-                </h3>
-                <p className="text-slate-400 text-xs sm:text-sm mt-1">
-                  Reach out to KNR Enterprises for product enquiries and business requirements.
-                </p>
-              </div>
-            </div>
-
-            {/* Right Action Buttons */}
-            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto shrink-0">
-              {/* Call Us Button */}
-              <a
-                href="tel:8886175855"
-                className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs sm:text-sm px-6 py-2.5 rounded-full shadow-lg shadow-orange-500/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95"
-              >
-                <Phone className="w-4 h-4 text-white" />
-                <span>Call Us</span>
-              </a>
-
-              {/* WhatsApp Us Button */}
-              <a
-                href="https://wa.me/918886175855?text=Hello%20KNR%20Enterprises,%20I%20have%20a%20business%20requirement%20to%20discuss"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-transparent border border-white/60 hover:border-white hover:bg-white/10 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-full flex items-center gap-2 transition-all cursor-pointer backdrop-blur-xs"
-              >
-                <MessageCircle className="w-4 h-4 text-emerald-400" />
-                <span>WhatsApp Us</span>
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          5. BUSINESS DETAILS STRIP (Bottom Credential Badges)
+          5. BUSINESS DETAILS STRIP
          ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14 sm:pb-16">
         <div className="border-t border-slate-200/80 pt-8 sm:pt-10">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-            {/* Column 1: KNR Enterprises Summary (5 cols) */}
             <div className="md:col-span-5 space-y-2">
               <span className="text-orange-500 font-bold text-xs uppercase tracking-wider block">
                 Business Details
               </span>
               <h4 className="text-xl sm:text-2xl font-black text-[#0f172a] tracking-tight">
-                KNR ENTERPRISES
+                {settings?.websiteName || 'KNR ENTERPRISES'}
               </h4>
               <p className="text-xs text-slate-500 leading-relaxed max-w-sm">
                 A trusted supplier of industrial, municipal, sanitation, chemical and infrastructure-related supplies.
@@ -320,7 +466,6 @@ export const ContactScreen: React.FC<ContactScreenProps> = () => {
               <div className="w-12 h-0.5 bg-orange-500 rounded-full mt-2" />
             </div>
 
-            {/* Column 2: Contact Persons (4 cols) */}
             <div className="md:col-span-4 flex items-start gap-3.5 md:border-l md:border-slate-200 md:pl-8">
               <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
                 <Users className="w-5 h-5 text-orange-500" />
@@ -330,13 +475,12 @@ export const ContactScreen: React.FC<ContactScreenProps> = () => {
                   Contact Persons
                 </h5>
                 <div className="text-xs text-slate-600 font-medium leading-relaxed pt-0.5">
-                  <p>K. Narendar Reddy</p>
-                  <p>G. Siva</p>
+                  <p>K. Narendar Reddy ({phone1})</p>
+                  <p>G. Siva ({phone2})</p>
                 </div>
               </div>
             </div>
 
-            {/* Column 3: GSTIN (3 cols) */}
             <div className="md:col-span-3 flex items-start gap-3.5 md:border-l md:border-slate-200 md:pl-8">
               <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
                 <Scale className="w-5 h-5 text-orange-500" />
@@ -346,7 +490,7 @@ export const ContactScreen: React.FC<ContactScreenProps> = () => {
                   GSTIN
                 </h5>
                 <p className="text-xs font-mono font-bold text-slate-700 tracking-wide pt-0.5">
-                  36CUHPK5939D1ZG
+                  {gstin}
                 </p>
               </div>
             </div>

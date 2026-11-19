@@ -1,7 +1,8 @@
 import React from 'react';
 import { Screen, Language } from '../types';
 import { Logo } from './Logo';
-import { Phone, Mail, MapPin, Facebook, Instagram, Linkedin, Youtube } from 'lucide-react';
+import { Phone, Mail, MapPin, Facebook, Instagram, Linkedin, Youtube, Lock } from 'lucide-react';
+import { useWebsiteSettings } from '../context/WebsiteSettingsContext';
 
 interface FooterProps {
   onNavigate: (screen: Screen) => void;
@@ -10,10 +11,18 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+  const { settings } = useWebsiteSettings();
+
   const handleNavClick = (screen: Screen) => {
     onNavigate(screen);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const phone1 = settings?.phonePrimary || '+91 8886175855';
+  const phone2 = settings?.phoneSecondary || '+91 9640195798';
+  const email = settings?.officialEmail || 'knrenterprises679@gmail.com';
+  const gstin = settings?.gstin || '36CUHPK5939D1ZG';
+  const address = settings?.depotAddress || 'H.No: 1-77/6, Near HP Petrol Pump, Chevella, Ranga Reddy, Telangana 501503';
 
   return (
     <footer className="bg-[#070b12] text-slate-400 pt-14 pb-24 md:pb-12 border-t border-slate-800/80 print:hidden">
@@ -29,14 +38,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               onClick={() => handleNavClick('home')}
             />
             <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-              Leading wholesale partner for industrial, sanitation, chemical and utility infrastructure supplies across Telangana.
+              {settings?.tagline || 'Leading wholesale partner for industrial, sanitation, chemical and utility infrastructure supplies across Telangana.'}
             </p>
             <div className="text-[11px] font-mono text-slate-500 pt-1">
-              GSTIN: <span className="text-slate-300">36CUHPK5939D1ZG</span>
+              GSTIN: <span className="text-slate-300 font-bold">{gstin}</span>
             </div>
           </div>
 
-          {/* Column 2: Quick Links (3 cols) - Only 4 Public Pages */}
+          {/* Column 2: Quick Links (3 cols) */}
           <div className="lg:col-span-3 space-y-3">
             <h4 className="text-sm font-bold text-white tracking-wide">Quick Links</h4>
             <ul className="space-y-2 text-xs">
@@ -82,35 +91,35 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <li className="flex items-start gap-2.5">
                 <Phone className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-0.5">
-                  <a href="tel:8886175855" className="hover:text-orange-400 transition-colors">
-                    +91 8886175855 (K. Narendar Reddy)
+                  <a href={`tel:${phone1.replace(/[^0-9+]/g, '')}`} className="hover:text-orange-400 transition-colors">
+                    {phone1} (K. Narendar Reddy)
                   </a>
-                  <a href="tel:9640195798" className="hover:text-orange-400 transition-colors">
-                    +91 9640195798 (G. Siva)
+                  <a href={`tel:${phone2.replace(/[^0-9+]/g, '')}`} className="hover:text-orange-400 transition-colors">
+                    {phone2} (G. Siva)
                   </a>
                 </div>
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-orange-500 shrink-0" />
-                <a href="mailto:knrenterprises679@gmail.com" className="hover:text-orange-400 transition-colors">
-                  knrenterprises679@gmail.com
+                <a href={`mailto:${email}`} className="hover:text-orange-400 transition-colors">
+                  {email}
                 </a>
               </li>
               <li className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
                 <span className="leading-relaxed">
-                  H.No: 1-77/6, Near HP Petrol Pump, Chevella, Ranga Reddy, Telangana 501503
+                  {address}
                 </span>
               </li>
             </ul>
           </div>
 
-          {/* Column 4: Follow Us (2 cols) */}
+          {/* Column 4: Follow Us & Admin Link (2 cols) */}
           <div className="lg:col-span-2 space-y-3">
             <h4 className="text-sm font-bold text-white tracking-wide">Follow Us</h4>
             <div className="flex items-center gap-3 text-slate-400">
               <a
-                href="https://facebook.com"
+                href={settings?.facebookUrl || 'https://facebook.com'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-orange-500 hover:text-white flex items-center justify-center transition-all cursor-pointer"
@@ -119,7 +128,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <Facebook className="w-4 h-4" />
               </a>
               <a
-                href="https://instagram.com"
+                href={settings?.instagramUrl || 'https://instagram.com'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-orange-500 hover:text-white flex items-center justify-center transition-all cursor-pointer"
@@ -128,7 +137,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <Instagram className="w-4 h-4" />
               </a>
               <a
-                href="https://linkedin.com"
+                href={settings?.linkedinUrl || 'https://linkedin.com'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-orange-500 hover:text-white flex items-center justify-center transition-all cursor-pointer"
@@ -137,7 +146,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <Linkedin className="w-4 h-4" />
               </a>
               <a
-                href="https://youtube.com"
+                href={settings?.youtubeUrl || 'https://youtube.com'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-orange-500 hover:text-white flex items-center justify-center transition-all cursor-pointer"
@@ -146,13 +155,23 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <Youtube className="w-4 h-4" />
               </a>
             </div>
+
+            <div className="pt-4">
+              <a
+                href="#admin"
+                className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-orange-400 transition-colors"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Admin Portal</span>
+              </a>
+            </div>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div>
-            &copy; 2025 KNR Enterprises. All rights reserved.
+            &copy; {new Date().getFullYear()} {settings?.websiteName || 'KNR Enterprises'}. All rights reserved.
           </div>
           <div className="flex items-center gap-4">
             <a href="#privacy" className="hover:text-slate-300 transition-colors">
