@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Screen, Language } from '../../types';
 import { getAssetUrl } from '../../utils/assets';
 import {
@@ -8,11 +8,11 @@ import {
   ShieldCheck,
   Headphones,
   ArrowRight,
-  User,
   Building,
   Target,
   Eye,
-  CheckCircle2
+  CheckCircle2,
+  Truck
 } from 'lucide-react';
 
 interface AboutScreenProps {
@@ -22,7 +22,6 @@ interface AboutScreenProps {
 }
 
 export const AboutScreen: React.FC<AboutScreenProps> = ({ onNavigate, language = 'en' }) => {
-  const [photoError, setPhotoError] = useState(false);
 
   const values = [
     {
@@ -113,107 +112,83 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ onNavigate, language =
       </section>
 
       {/* =========================================================================
-          2. MAIN CONTENT: OUR STORY, MISSION & FOUNDER
+          2. MAIN CONTENT: OUR STORY & CORE VALUES
          ========================================================================= */}
       <section className="bg-white py-16 sm:py-24 border-b border-[#E2E8F0]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-            {/* Left Column: Our Story & Values (5.5 cols) */}
-            <div className="lg:col-span-5 space-y-4">
-              <div className="text-[#F57C00] font-bold text-xs uppercase tracking-wider">
-                OUR JOURNEY & CORE VALUES
+            {/* Left Column: Our Story & Mission (6 cols) */}
+            <div className="lg:col-span-6 space-y-5">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#FFF3E0] text-[#F57C00] font-bold text-xs uppercase tracking-wider">
+                OUR JOURNEY & MISSION
               </div>
 
               <h2 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight font-display">
-                About Our Company
+                Dedicated Wholesale Supply for Telangana's Civic Infrastructure
               </h2>
 
               <p className="text-[#64748B] text-sm sm:text-base leading-relaxed">
-                At KNR Enterprises, we are committed to supplying high-quality municipal, sanitation and industrial products. We work with Gram Panchayats, Municipal Corporations and infrastructure contractors to deliver dependable products and procurement support.
+                At KNR Enterprises, we are committed to supplying high-quality municipal, sanitation and industrial products. We work directly with Gram Panchayats, Municipal Corporations, and infrastructure EPC contractors to deliver dependable bulk products and end-to-end procurement support.
               </p>
 
               <p className="text-[#64748B] text-sm sm:text-base leading-relaxed">
-                Headquartered along the Chevella–Vikarabad highway in Ranga Reddy District, KNR Enterprises operates dedicated warehousing for Swachh Bharat supplies, CIB-registered vector control chemicals, civic LED streetlights, and sanitation worker safety kits.
+                Headquartered along the Chevella–Vikarabad highway in Ranga Reddy District, KNR Enterprises operates dedicated warehousing for Swachh Bharat supplies, CIB-registered vector control chemicals, civic LED streetlights, and sanitation worker safety kits with prompt highway dispatch across all 33 Telangana districts.
               </p>
 
-              {/* Company Values */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-[#E2E8F0]">
+              <div className="pt-2 flex flex-wrap gap-3">
+                <button
+                  onClick={() => onNavigate('products')}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#F57C00] hover:bg-[#E06D00] text-white font-bold text-xs sm:text-sm shadow-md shadow-orange-500/20 transition-all cursor-pointer"
+                >
+                  <span>Explore Product Catalog</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => onNavigate('contact')}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-[#111827] border border-[#E2E8F0] font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+                >
+                  <span>Contact Chevella Depot</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Right Column: Institutional Core Values (6 cols) */}
+            <div className="lg:col-span-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {values.map((val, idx) => {
                   const Icon = val.icon;
                   return (
-                    <div key={idx} className="p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-[#FFF3E0] text-[#F57C00] flex items-center justify-center shrink-0">
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <h4 className="font-bold text-xs text-[#111827]">{val.titleLine1} {val.titleLine2}</h4>
+                    <div
+                      key={idx}
+                      className="p-5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] hover:border-[#F57C00]/40 transition-all shadow-xs space-y-2 group"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-[#FFF3E0] text-[#F57C00] flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Icon className="w-5 h-5" />
                       </div>
-                      <p className="text-[11px] text-[#64748B] pl-9">{val.desc}</p>
+                      <h4 className="font-bold text-sm text-[#111827]">
+                        {val.titleLine1} {val.titleLine2}
+                      </h4>
+                      <p className="text-xs text-[#64748B] leading-relaxed">
+                        {val.desc}
+                      </p>
                     </div>
                   );
                 })}
               </div>
-            </div>
 
-            {/* Right Column: Founder Card */}
-            <div className="lg:col-span-7 relative">
-              <div className="bg-white border border-[#E2E8F0] rounded-3xl p-6 sm:p-8 shadow-lg relative z-10 overflow-hidden">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                  {/* Founder Photo */}
-                  <div className="md:col-span-5 flex justify-center">
-                    <div className="relative w-full max-w-[220px] aspect-[4/5] rounded-2xl overflow-hidden border border-[#E2E8F0] shadow-sm bg-slate-100 flex items-center justify-center">
-                      {!photoError ? (
-                        <img
-                          src={getAssetUrl('/founder-k-narendar-reddy.jpg')}
-                          alt="Mr. K. Narendar Reddy, Founder"
-                          className="w-full h-full object-cover"
-                          onError={() => setPhotoError(true)}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-slate-100 text-slate-400">
-                          <div className="w-16 h-16 rounded-full bg-white shadow-inner flex items-center justify-center mb-2">
-                            <User className="w-8 h-8 text-slate-400" />
-                          </div>
-                          <span className="text-xs font-semibold text-slate-600">
-                            K. Narendar Reddy
-                          </span>
-                          <span className="text-[10px] text-slate-400 mt-0.5">
-                            Managing Partner
-                          </span>
-                        </div>
-                      )}
-                    </div>
+              {/* Bottom statutory highlight strip */}
+              <div className="mt-4 p-4 rounded-2xl bg-[#0D2B5B] text-white flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                    <Truck className="w-4 h-4 text-orange-400" />
                   </div>
-
-                  {/* Founder Details & Signature */}
-                  <div className="md:col-span-7 space-y-3 text-left">
-                    <div className="text-[#F57C00] font-bold text-xs uppercase tracking-wider">
-                      FOUNDER & MANAGING PARTNER
-                    </div>
-
-                    <h3 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight font-display">
-                      K. Narendar Reddy
-                    </h3>
-
-                    <div className="w-12 h-1 bg-[#F57C00] rounded-full" />
-
-                    <p className="text-[#64748B] text-xs sm:text-sm leading-relaxed">
-                      "Our focus has always been steadfast: provide Gram Panchayats and civic contractors with the highest potency formulations and heavy-duty sanitation equipment with zero delays and transparent GST invoices."
-                    </p>
-
-                    <div className="pt-2">
-                      <div className="h-10 sm:h-12 flex items-center">
-                        <img
-                          src={getAssetUrl('/founder-signature.png')}
-                          alt="K. Narendar Reddy Signature"
-                          className="h-9 sm:h-11 w-auto object-contain"
-                        />
-                      </div>
-                      <div className="text-xs text-[#64748B] font-semibold mt-1">
-                        Managing Partner, KNR Enterprises
-                      </div>
-                    </div>
+                  <div className="text-xs">
+                    <div className="font-bold">Highway Dispatch Fleet</div>
+                    <div className="text-slate-300 text-[11px]">Same-Day &amp; 24-48 Hr delivery across Telangana</div>
                   </div>
+                </div>
+                <div className="text-right shrink-0 font-mono text-xs font-bold text-emerald-400">
+                  GST: 36CUHPK5939D1ZG
                 </div>
               </div>
             </div>
