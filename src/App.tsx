@@ -22,7 +22,6 @@ import {
   Info,
   ShoppingCart,
   PhoneCall,
-  Bell,
   AlertTriangle,
   Lock,
   Truck,
@@ -244,15 +243,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-orange-500/20 selection:text-orange-600">
-      {/* 0. Website Announcement Banner (if enabled in Admin Settings) */}
-      {settings?.announcementBannerEnabled && settings?.announcementBannerText && (
-        <div className="bg-gradient-to-r from-orange-600 via-amber-600 to-orange-600 text-white text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-2 shadow-inner print:hidden">
-          <Bell className="w-3.5 h-3.5 shrink-0 animate-bounce" />
-          <span>{settings.announcementBannerText}</span>
-        </div>
-      )}
-
-      {/* Shared Header Navigation */}
+      {/* Shared Header Navigation (includes top announcement bar) */}
       <Header
         currentScreen={currentScreen}
         onNavigate={handleNavigate}

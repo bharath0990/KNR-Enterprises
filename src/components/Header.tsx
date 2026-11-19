@@ -77,20 +77,22 @@ export const Header: React.FC<HeaderProps> = ({
   const isActive = (screen: Screen) => currentScreen === screen;
   const whatsappDigits = (settings?.whatsappNumber || '918886175855').replace(/[^0-9]/g, '');
 
+  const showAnnouncement = settings ? settings.announcementBannerEnabled : true;
   const announcementText =
-    settings?.announcementBannerEnabled && settings?.announcementBannerText
-      ? settings.announcementBannerText
-      : "Monsoon Sanitation & Vector Control Supplies in Stock at Chevella Depot. Same-Day Highway Dispatch across Telangana.";
+    (settings?.announcementBannerText && settings.announcementBannerText.trim()) ||
+    "Monsoon Sanitation & Vector Control Supplies in Stock at Chevella Depot. Same-Day Highway Dispatch across Telangana.";
 
   return (
     <>
       {/* =========================================================================
           1. TOP ANNOUNCEMENT BAR (Slim Orange Announcement Bar)
          ========================================================================= */}
-      <div className="bg-[#F57C00] text-white text-xs font-semibold py-2 px-4 text-center flex items-center justify-center gap-2 shadow-xs print:hidden z-50 relative">
-        <Bell className="w-3.5 h-3.5 shrink-0 animate-pulse text-amber-200" />
-        <span className="tracking-wide line-clamp-1">{announcementText}</span>
-      </div>
+      {showAnnouncement && (
+        <div className="bg-[#F57C00] text-white text-xs font-semibold py-2 px-4 text-center flex items-center justify-center gap-2 shadow-xs print:hidden z-50 relative">
+          <Bell className="w-3.5 h-3.5 shrink-0 animate-pulse text-amber-200" />
+          <span className="tracking-wide line-clamp-1">{announcementText}</span>
+        </div>
+      )}
 
       {/* =========================================================================
           2. MAIN NAVIGATION (White background, subtle bottom border)
