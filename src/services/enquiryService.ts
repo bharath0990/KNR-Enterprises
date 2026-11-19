@@ -1,5 +1,6 @@
 import { CustomerEnquiry, EnquiryItem, EnquiryStatus } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { dispatchRfqNotifications } from './notificationService';
 
 const ENQUIRIES_STORAGE_KEY = 'knr_admin_enquiries_store';
 
@@ -347,6 +348,11 @@ export async function submitRfqEnquiry(
   const updated = [newEnquiry, ...current];
   localStorage.setItem(ENQUIRIES_STORAGE_KEY, JSON.stringify(updated));
   window.dispatchEvent(new CustomEvent('knr_enquiries_updated', { detail: newEnquiry }));
+
+  // Independent multi-channel notifications (Email, WhatsApp 1, WhatsApp 2)
+  dispatchRfqNotifications(newEnquiry, items).catch((err) => {
+    console.warn('Background RFQ notification dispatch warning:', err);
+  });
 
   return newEnquiry;
 }

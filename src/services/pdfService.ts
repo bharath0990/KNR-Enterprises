@@ -313,3 +313,4 @@ export function getQuotationPdfBlobUrl(quotation: Quotation, items: QuotationIte
   const blob = doc.output('blob');
   return URL.createObjectURL(blob);
 }
+

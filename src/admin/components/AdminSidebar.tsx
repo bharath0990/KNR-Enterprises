@@ -14,6 +14,7 @@ import {
   Briefcase,
   Settings,
   ShieldCheck,
+  BellRing,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -108,6 +109,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       id: 'website-settings' as AdminTab,
       label: 'Website Settings',
       icon: Settings,
+    },
+    {
+      id: 'rfq-notifications' as AdminTab,
+      label: 'RFQ Notifications',
+      icon: BellRing,
     },
     {
       id: 'admin-profile' as AdminTab,

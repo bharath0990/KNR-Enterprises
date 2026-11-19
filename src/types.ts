@@ -17,6 +17,7 @@ export type AdminTab =
   | 'services'
   | 'website-settings'
   | 'settings'
+  | 'rfq-notifications'
   | 'admin-profile';
 
 export interface Product {
@@ -410,4 +411,40 @@ export interface AdminNotification {
   referenceTab?: AdminTab;
   customerName?: string;
   amount?: number;
+}
+
+export interface RfqNotificationSettings {
+  id?: string;
+  adminEmail: string;
+  whatsappRecipient1: string;
+  whatsappRecipient2: string;
+  emailIntegrationStatus: string;
+  whatsappIntegrationStatus: string;
+  notifyOnNewRfq: boolean;
+  notifyOnQuotationCreated: boolean;
+  notifyOnOrderConfirmed: boolean;
+  updatedAt?: string;
+}
+
+export interface RfqNotificationLog {
+  id: string;
+  enquiryId?: string;
+  enquiryNumber: string;
+  channel: 'email' | 'whatsapp';
+  recipient: string;
+  recipientLabel: string;
+  subject?: string;
+  content: string;
+  status: 'sent' | 'delivered' | 'failed' | 'simulated_sent' | 'pending_retry';
+  errorMessage?: string;
+  retryCount: number;
+  lastAttemptAt: string;
+  createdAt: string;
+}
+
+export interface RfqDispatchResult {
+  emailResult: { success: boolean; recipient: string; logId: string; error?: string };
+  whatsapp1Result: { success: boolean; recipient: string; logId: string; error?: string };
+  whatsapp2Result: { success: boolean; recipient: string; logId: string; error?: string };
+  allSucceeded: boolean;
 }

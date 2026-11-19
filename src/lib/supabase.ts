@@ -1,8 +1,15 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Retrieve environment variables with production defaults
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wslxpaxwwmgbhpcandld.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_XsaGQKSZ0yMGKQCdmJA7jA_vQ9fLrBj';
+const env: Record<string, string | undefined> =
+  typeof import.meta !== 'undefined' && import.meta.env
+    ? (import.meta.env as any)
+    : typeof process !== 'undefined' && process.env
+    ? process.env
+    : {};
+
+const supabaseUrl = env.VITE_SUPABASE_URL || 'https://wslxpaxwwmgbhpcandld.supabase.co';
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_XsaGQKSZ0yMGKQCdmJA7jA_vQ9fLrBj';
 
 // Validate if real Supabase credentials are configured
 export const isSupabaseConfigured = (): boolean => {

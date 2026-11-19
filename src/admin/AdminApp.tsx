@@ -16,6 +16,7 @@ import { TestimonialsPage } from './pages/TestimonialsPage';
 import { FaqsPage } from './pages/FaqsPage';
 import { ServicesPage } from './pages/ServicesPage';
 import { WebsiteSettingsPage } from './pages/WebsiteSettingsPage';
+import { RfqNotificationSettingsPage } from './pages/RfqNotificationSettingsPage';
 import { AdminProfilePage } from './pages/AdminProfilePage';
 import { fetchEnquiries } from '../services/enquiryService';
 import { fetchProducts } from '../services/productService';
@@ -46,6 +47,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
       'services',
       'website-settings',
       'settings',
+      'rfq-notifications',
       'admin-profile',
     ];
     if (clean === 'content') return 'website-content';
@@ -259,7 +261,10 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
         <WebsiteSettingsPage />
       )}
 
-      {/* 13. Admin Profile */}
+      {/* 13. RFQ Notification Settings */}
+      {currentTab === 'rfq-notifications' && <RfqNotificationSettingsPage />}
+
+      {/* 14. Admin Profile */}
       {currentTab === 'admin-profile' && <AdminProfilePage user={user} />}
     </AdminLayout>
   );

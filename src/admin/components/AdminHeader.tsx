@@ -50,6 +50,7 @@ const tabTitles: Record<AdminTab, string> = {
   services: 'Institutional Services',
   'website-settings': 'Website Control Settings',
   settings: 'Website Control Settings',
+  'rfq-notifications': 'RFQ Notification Settings',
   'admin-profile': 'Administrator Profile & Security',
 };
 

@@ -39,6 +39,7 @@ import {
 import { downloadQuotationPdf } from '../../services/pdfService';
 import { formatINR } from '../../services/productService';
 import { useWebsiteSettings } from '../../context/WebsiteSettingsContext';
+import { recordNotificationLog } from '../../services/notificationService';
 
 interface QuotationBuilderModalProps {
   isOpen: boolean;
@@ -444,8 +445,8 @@ export const QuotationBuilderModal: React.FC<QuotationBuilderModalProps> = ({
     }
   };
 
-  // 3. Send via WhatsApp
-  const handleSendWhatsApp = async () => {
+  // 3. Send via WhatsApp (Customer or configured internal recipients)
+  const handleSendWhatsApp = async (targetPhone?: string, recipientLabel?: string) => {
     setIsSaving(true);
     try {
       const payload = buildQuotationPayload('Sent');
@@ -496,8 +497,10 @@ export const QuotationBuilderModal: React.FC<QuotationBuilderModalProps> = ({
         })),
       });
 
-      // Format WhatsApp Message
-      const cleanPhone = mobileNumber.replace(/[^0-9]/g, '');
+      // Target recipient
+      const finalRecipient = targetPhone || mobileNumber;
+      const label = recipientLabel || (targetPhone ? `Internal Team (${targetPhone})` : 'Customer WhatsApp');
+      const cleanPhone = finalRecipient.replace(/[^0-9]/g, '');
       const phone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
 
       let msg = `*OFFICIAL QUOTATION — KNR ENTERPRISES*\n`;
@@ -526,15 +529,29 @@ export const QuotationBuilderModal: React.FC<QuotationBuilderModalProps> = ({
 
       msg += `Warm Regards,\n*K. Narendar Reddy*\nManaging Partner, KNR Enterprises\nChevella Logistics Depot, Telangana\nGSTIN: 36CUHPK5939D1ZG`;
 
-      // Log communication
+      // Log communication record
       await logCommunication({
         enquiryId: enquiry.id,
         quotationId: saved.id,
         channel: 'whatsapp',
-        recipient: mobileNumber,
+        recipient: finalRecipient,
         subject: `Quotation ${saved.quotationNumber}`,
         messagePreview: msg.slice(0, 200),
         status: 'sent',
+      });
+
+      // Also record in RFQ Notification Logs
+      await recordNotificationLog({
+        enquiryId: enquiry.id,
+        enquiryNumber: enquiry.enquiryNumber,
+        channel: 'whatsapp',
+        recipient: finalRecipient,
+        recipientLabel: label,
+        subject: `Quotation ${saved.quotationNumber}`,
+        content: msg,
+        status: 'sent',
+        retryCount: 0,
+        lastAttemptAt: new Date().toISOString(),
       });
 
       setQuotationStatus('Sent');
@@ -545,7 +562,7 @@ export const QuotationBuilderModal: React.FC<QuotationBuilderModalProps> = ({
         '_blank',
         'noopener,noreferrer'
       );
-      setSuccessMessage('Quotation sent via WhatsApp and logged to communication history!');
+      setSuccessMessage(`Quotation dispatched via WhatsApp to ${label}!`);
     } catch (err: any) {
       setErrorMessage(`Failed to send WhatsApp: ${err?.message || err}`);
     } finally {
@@ -1393,15 +1410,39 @@ export const QuotationBuilderModal: React.FC<QuotationBuilderModalProps> = ({
               <span>Download PDF</span>
             </button>
 
+            {/* WhatsApp to Customer */}
             <button
               type="button"
-              onClick={handleSendWhatsApp}
+              onClick={() => handleSendWhatsApp()}
               disabled={isSaving}
               className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+              title="Share quotation with Customer WhatsApp"
             >
               <MessageCircle className="w-4 h-4" />
-              <span>Send via WhatsApp</span>
+              <span>WhatsApp Customer</span>
             </button>
+
+            {/* Internal WhatsApp Dispatches */}
+            <div className="hidden lg:flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => handleSendWhatsApp('+918886175855', 'WhatsApp Recipient 1 (+918886175855)')}
+                disabled={isSaving}
+                className="px-2.5 py-2 bg-slate-100 hover:bg-emerald-50 text-emerald-800 border border-slate-200 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                title="Send quotation copy to +918886175855"
+              >
+                <span>+91 8886175855</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendWhatsApp('+919666469679', 'WhatsApp Recipient 2 (+919666469679)')}
+                disabled={isSaving}
+                className="px-2.5 py-2 bg-slate-100 hover:bg-emerald-50 text-emerald-800 border border-slate-200 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                title="Send quotation copy to +919666469679"
+              >
+                <span>+91 9666469679</span>
+              </button>
+            </div>
 
             {email && (
               <button

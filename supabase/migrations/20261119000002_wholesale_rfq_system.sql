@@ -202,3 +202,4 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.confirmed_orders;
     END IF;
 END $$;
+

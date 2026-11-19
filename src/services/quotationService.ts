@@ -768,3 +768,4 @@ function mapDbToQuotation(row: any): Quotation {
     updatedAt: row.updated_at,
   };
 }
+
