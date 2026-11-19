@@ -8,6 +8,8 @@ import { ProformaModal } from './components/ProformaModal';
 import { HomeScreen } from './components/Screens/HomeScreen';
 import { CatalogScreen } from './components/Screens/CatalogScreen';
 import { AboutScreen } from './components/Screens/AboutScreen';
+import { ServicesScreen } from './components/Screens/ServicesScreen';
+import { FaqsScreen } from './components/Screens/FaqsScreen';
 import { ContactScreen } from './components/Screens/ContactScreen';
 import { AdminApp } from './admin/AdminApp';
 import { AuthProvider } from './context/AuthContext';
@@ -23,6 +25,7 @@ import {
   Bell,
   AlertTriangle,
   Lock,
+  Truck,
 } from 'lucide-react';
 import { Logo } from './components/Logo';
 
@@ -109,7 +112,7 @@ function AppContent() {
         return;
       }
 
-      if (['home', 'about', 'products', 'contact'].includes(clean)) {
+      if (['home', 'about', 'products', 'services', 'faqs', 'contact'].includes(clean)) {
         setCurrentScreen(clean as Screen);
       } else {
         setCurrentScreen('home');
@@ -265,7 +268,7 @@ function AppContent() {
         }}
       />
 
-      {/* Main Screen Views: Exactly 4 Public Pages */}
+      {/* Main Screen Views: 6 Synchronized Public Pages */}
       <main className="flex-1">
         {currentScreen === 'home' && (
           <HomeScreen
@@ -298,6 +301,21 @@ function AppContent() {
           />
         )}
 
+        {currentScreen === 'services' && (
+          <ServicesScreen
+            onNavigate={handleNavigate}
+            onOpenProforma={() => setIsProformaOpen(true)}
+            language={language}
+          />
+        )}
+
+        {currentScreen === 'faqs' && (
+          <FaqsScreen
+            onNavigate={handleNavigate}
+            language={language}
+          />
+        )}
+
         {currentScreen === 'contact' && (
           <ContactScreen
             onNavigate={handleNavigate}
@@ -312,12 +330,12 @@ function AppContent() {
         language={language}
       />
 
-      {/* Mobile Web Application App Bar (4 Public Pages + Cart) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0e17]/95 backdrop-blur-md border-t border-slate-800 md:hidden py-1.5 px-2 flex items-center justify-around shadow-2xl print:hidden text-white">
+      {/* Mobile Web Application App Bar (Public Pages + Cart) */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 md:hidden py-1.5 px-2 flex items-center justify-around shadow-xl print:hidden text-slate-700">
         <button
           onClick={() => handleNavigate('home')}
           className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 cursor-pointer transition-colors ${
-            currentScreen === 'home' ? 'text-orange-500 font-bold' : 'text-slate-400 hover:text-white'
+            currentScreen === 'home' ? 'text-[#F57C00] font-bold' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
           <Home className="w-5 h-5" />
@@ -327,7 +345,7 @@ function AppContent() {
         <button
           onClick={() => handleNavigate('about')}
           className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 cursor-pointer transition-colors ${
-            currentScreen === 'about' ? 'text-orange-500 font-bold' : 'text-slate-400 hover:text-white'
+            currentScreen === 'about' ? 'text-[#F57C00] font-bold' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
           <Info className="w-5 h-5" />
@@ -337,7 +355,7 @@ function AppContent() {
         <button
           onClick={() => handleNavigate('products')}
           className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 cursor-pointer transition-colors ${
-            currentScreen === 'products' ? 'text-orange-500 font-bold' : 'text-slate-400 hover:text-white'
+            currentScreen === 'products' ? 'text-[#F57C00] font-bold' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
           <Package className="w-5 h-5" />
@@ -345,9 +363,19 @@ function AppContent() {
         </button>
 
         <button
+          onClick={() => handleNavigate('services')}
+          className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 cursor-pointer transition-colors ${
+            currentScreen === 'services' ? 'text-[#F57C00] font-bold' : 'text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <Truck className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">{language === 'te' ? 'సేవలు' : 'Services'}</span>
+        </button>
+
+        <button
           onClick={() => handleNavigate('contact')}
           className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 cursor-pointer transition-colors ${
-            currentScreen === 'contact' ? 'text-orange-500 font-bold' : 'text-slate-400 hover:text-white'
+            currentScreen === 'contact' ? 'text-[#F57C00] font-bold' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
           <PhoneCall className="w-5 h-5" />
@@ -356,12 +384,12 @@ function AppContent() {
 
         <button
           onClick={() => setIsCartOpen(true)}
-          className="relative min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 cursor-pointer text-slate-400 hover:text-orange-500 transition-colors"
+          className="relative min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 cursor-pointer text-slate-500 hover:text-[#F57C00] transition-colors"
           aria-label="View RFQ Cart"
         >
           <ShoppingCart className="w-5 h-5" />
           {cartItems.length > 0 && (
-            <span className="absolute -top-0.5 right-1.5 bg-orange-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+            <span className="absolute -top-0.5 right-1.5 bg-[#F57C00] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
               {cartItems.length}
             </span>
           )}

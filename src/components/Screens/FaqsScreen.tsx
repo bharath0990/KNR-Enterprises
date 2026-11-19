@@ -13,7 +13,8 @@ import {
   MapPin,
   FileText,
   CheckCircle2,
-  Tag
+  Tag,
+  Home
 } from 'lucide-react';
 
 interface FaqsScreenProps {
@@ -51,10 +52,10 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
       if (searchQuery.trim() !== '') {
         const q = searchQuery.toLowerCase();
         const matchesQ = faq.question.toLowerCase().includes(q);
-        const matchesTeluguQ = faq.questionTelugu.toLowerCase().includes(q);
+        const matchesTeluguQ = faq.questionTelugu ? faq.questionTelugu.toLowerCase().includes(q) : false;
         const matchesA = faq.answer.toLowerCase().includes(q);
         const matchesCat = faq.category.toLowerCase().includes(q);
-        const matchesTags = faq.tags.some((tag) => tag.toLowerCase().includes(q));
+        const matchesTags = faq.tags ? faq.tags.some((tag) => tag.toLowerCase().includes(q)) : false;
         return matchesQ || matchesTeluguQ || matchesA || matchesCat || matchesTags;
       }
       return true;
@@ -62,30 +63,31 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
   }, [activeCategory, searchQuery]);
 
   return (
-    <div className="space-y-12 pb-16">
+    <div className="w-full bg-[#F8FAFC] text-[#111827] space-y-12 pb-20 selection:bg-[#F57C00]/20 selection:text-[#F57C00]">
       {/* 1. TOP HEADER & BREADCRUMB */}
-      <section className="bg-slate-50 border-b border-slate-200 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <nav className="flex items-center space-x-2 text-xs text-slate-500 mb-3">
+      <section className="relative bg-gradient-to-b from-[#FFF3E0]/50 via-white to-[#F8FAFC] text-[#111827] pt-10 sm:pt-16 pb-12 sm:pb-16 border-b border-[#E2E8F0] overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex items-center space-x-2 text-xs text-[#64748B] mb-3 font-medium">
+            <Home className="w-3.5 h-3.5 text-slate-400" />
             <button
               onClick={() => onNavigate('home')}
-              className="hover:text-primary transition-colors cursor-pointer"
+              className="hover:text-[#F57C00] transition-colors cursor-pointer"
             >
               Home
             </button>
             <span>/</span>
-            <span className="text-slate-900 font-semibold">FAQs</span>
+            <span className="text-[#111827] font-bold">Frequently Asked Questions</span>
           </nav>
 
           <div className="text-center max-w-3xl mx-auto space-y-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-primary">
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold bg-[#FFF3E0] border border-orange-200 text-[#F57C00]">
               <HelpCircle className="w-3.5 h-3.5" />
               <span>DEPOT HELP & PROCUREMENT KNOWLEDGE BASE</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#111827] tracking-tight font-display">
               Frequently Asked Questions
             </h1>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl mx-auto">
+            <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed max-w-2xl mx-auto">
               Clear, transparent answers regarding government tenders, bulk municipal pricing, GST invoices, logistics delivery schedules, and payment terms for institutional buyers across Telangana.
             </p>
 
@@ -99,7 +101,7 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search questions or keywords (e.g. GST, MOQ, Tenders, Bleaching, Delivery)..."
                   aria-label="Search frequently asked questions"
-                  className="w-full pl-11 pr-4 py-3 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-2xs transition-all"
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-[#E2E8F0] rounded-xl text-xs sm:text-sm text-[#111827] placeholder-slate-400 focus:outline-none focus:border-[#F57C00] shadow-xs transition-all"
                 />
               </div>
             </div>
@@ -117,10 +119,10 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-slate-900 text-white shadow-xs'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                        ? 'bg-[#F57C00] text-white shadow-xs'
+                        : 'bg-white text-slate-600 border border-[#E2E8F0] hover:border-orange-300 hover:text-[#111827]'
                     }`}
                   >
                     {cat} ({count})
@@ -135,10 +137,10 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
       {/* 2. ACCORDION LIST */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6">
         {filteredFaqs.length === 0 ? (
-          <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
-            <HelpCircle className="w-12 h-12 text-slate-400 mx-auto mb-3 opacity-60" />
-            <h3 className="font-bold text-slate-800 text-base">No questions found matching your query</h3>
-            <p className="text-xs text-slate-500 mt-1">
+          <div className="p-12 text-center bg-white rounded-3xl border border-[#E2E8F0] shadow-xs">
+            <HelpCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <h3 className="font-bold text-[#111827] text-base">No questions found matching your query</h3>
+            <p className="text-xs text-[#64748B] mt-1">
               Try searching with different terms or contact our Chevella desk directly for immediate answers.
             </p>
             <button
@@ -146,13 +148,13 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
                 setActiveCategory('All');
                 setSearchQuery('');
               }}
-              className="mt-4 bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg cursor-pointer"
+              className="mt-4 bg-[#F57C00] hover:bg-[#E06D00] text-white text-xs font-bold px-5 py-2.5 rounded-full cursor-pointer shadow-xs"
             >
               Reset Filters
             </button>
           </div>
         ) : (
-          <div className="space-y-3.5">
+          <div className="space-y-4">
             {filteredFaqs.map((faq, index) => {
               const isOpen = openIds.includes(faq.id);
               const numberStr = (index + 1).toString().padStart(2, '0');
@@ -160,8 +162,8 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
               return (
                 <div
                   key={faq.id}
-                  className={`bg-white rounded-2xl border transition-all shadow-2xs ${
-                    isOpen ? 'border-primary ring-1 ring-primary/20' : 'border-slate-200 hover:border-slate-300'
+                  className={`bg-white rounded-2xl border transition-all shadow-xs ${
+                    isOpen ? 'border-[#F57C00] ring-1 ring-[#F57C00]/20' : 'border-[#E2E8F0] hover:border-slate-300'
                   }`}
                 >
                   <button
@@ -171,39 +173,39 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
                     className="w-full text-left p-5 sm:p-6 flex items-start justify-between gap-4 cursor-pointer"
                   >
                     <div className="flex items-start gap-4">
-                      <span className="font-mono text-base font-black text-primary shrink-0 mt-0.5">
+                      <span className="font-mono text-base font-black text-[#F57C00] shrink-0 mt-0.5">
                         {numberStr}
                       </span>
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#F57C00] bg-[#FFF3E0] px-2 py-0.5 rounded block w-fit mb-1.5">
                           {faq.category}
                         </span>
-                        <h3 className="font-bold text-sm sm:text-base text-slate-900 leading-snug">
-                          {language === 'te' ? faq.questionTelugu : faq.question}
+                        <h3 className="font-bold text-sm sm:text-base text-[#111827] leading-snug">
+                          {language === 'te' && faq.questionTelugu ? faq.questionTelugu : faq.question}
                         </h3>
                       </div>
                     </div>
 
-                    <div className="p-1 rounded-full bg-slate-100 text-slate-600 shrink-0 mt-1">
-                      {isOpen ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    <div className="p-1.5 rounded-full bg-slate-100 text-slate-600 shrink-0 mt-1">
+                      {isOpen ? <Minus className="w-4 h-4 text-[#F57C00]" /> : <Plus className="w-4 h-4" />}
                     </div>
                   </button>
 
                   {isOpen && (
                     <div
                       id={`faq-answer-${faq.id}`}
-                      className="px-6 pb-6 pt-0 border-t border-slate-100 mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed"
+                      className="px-6 pb-6 pt-0 border-t border-slate-100 mt-2 text-xs sm:text-sm text-[#64748B] leading-relaxed bg-[#F8FAFC]"
                     >
-                      <p className="pt-3">{faq.answer}</p>
+                      <p className="pt-4">{faq.answer}</p>
 
                       {faq.tags && faq.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-4 mt-4 border-t border-slate-100">
+                        <div className="flex flex-wrap gap-2 pt-4 mt-4 border-t border-slate-200/60">
                           {faq.tags.map((tag, tIdx) => (
                             <span
                               key={tIdx}
-                              className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 text-[11px] font-medium px-2.5 py-1 rounded-md"
+                              className="inline-flex items-center gap-1 bg-white text-slate-700 text-[11px] font-medium px-2.5 py-1 rounded-md border border-[#E2E8F0]"
                             >
-                              <Tag className="w-3 h-3 text-primary" />
+                              <Tag className="w-3 h-3 text-[#F57C00]" />
                               <span>{tag}</span>
                             </span>
                           ))}
@@ -220,24 +222,24 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
 
       {/* 3. BOTTOM CHEVELLA DIRECT HELPDESK CARD */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6">
-        <div className="p-6 sm:p-8 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="p-6 sm:p-8 rounded-3xl bg-white border border-[#E2E8F0] shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider block">
-              CHEVELLA DIRECT HELPDESK
+            <span className="text-xs font-bold text-[#F57C00] uppercase tracking-wider block">
+              CHEVELLA DIRECT PROCUREMENT HELPDESK
             </span>
-            <h4 className="text-lg font-bold text-slate-900">
+            <h4 className="text-lg font-bold text-[#111827]">
               Still have questions or need tender documents?
             </h4>
-            <p className="text-xs text-slate-600 max-w-md leading-relaxed">
+            <p className="text-xs text-[#64748B] max-w-md leading-relaxed">
               Direct procurement assistance from Managing Partner <strong>K. Narendar Reddy</strong> (8886175855) and Logistics Incharge <strong>G. Siva</strong> (9640195798). We provide fast turnaround on compliance paperwork.
             </p>
-            <div className="flex items-center gap-4 text-[11px] text-slate-500 pt-1">
+            <div className="flex items-center gap-4 text-[11px] text-[#64748B] pt-1">
               <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-primary" />
+                <MapPin className="w-3.5 h-3.5 text-[#F57C00]" />
                 <span>Chevella Depot, Telangana</span>
               </span>
               <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                <Clock className="w-3.5 h-3.5 text-[#16A34A]" />
                 <span>15-Min Response</span>
               </span>
             </div>
@@ -248,7 +250,7 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
               href="https://wa.me/918886175855?text=Hello%20KNR%20Enterprises,%20I%20have%20a%20question%20about%20procurement"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-2xs"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs px-5 py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-xs"
             >
               <MessageCircle className="w-4 h-4" />
               <span>Chat on WhatsApp</span>
@@ -256,9 +258,9 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
 
             <a
               href="tel:8886175855"
-              className="bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs px-4 py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
+              className="bg-white hover:bg-slate-50 text-[#111827] border border-[#E2E8F0] font-bold text-xs px-5 py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
             >
-              <Phone className="w-4 h-4 text-primary" />
+              <Phone className="w-4 h-4 text-[#F57C00]" />
               <span>Call Depot (+91 8886175855)</span>
             </a>
           </div>
