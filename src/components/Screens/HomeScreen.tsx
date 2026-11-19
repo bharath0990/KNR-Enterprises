@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Screen, Language, Product, Category } from '../../types';
+import { getAssetUrl } from '../../utils/assets';
 import {
   ShieldCheck,
   Handshake,
@@ -203,11 +204,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
                   <div className="overflow-hidden rounded-2xl bg-slate-50 aspect-[4/3] flex items-center justify-center">
                     <img
-                      src={homepageContent?.heroBannerImage || '/hero-knr-products.jpg'}
+                      src={getAssetUrl(homepageContent?.heroBannerImage || '/hero-knr-products.jpg')}
                       alt="KNR Enterprises Wholesale Supplies - Bleaching Powder, Bins, Foggers & LED Streetlights"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/hero-knr-products.jpg';
+                        (e.target as HTMLImageElement).src = getAssetUrl('/hero-knr-products.jpg');
                       }}
                     />
                   </div>
@@ -335,11 +336,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <div className="lg:col-span-6 relative">
                 <div className="relative rounded-3xl overflow-hidden shadow-xl border border-[#E2E8F0] bg-slate-100">
                   <img
-                    src={homepageContent?.aboutImage || '/building-knr-hq.jpg'}
+                    src={getAssetUrl(homepageContent?.aboutImage || '/building-knr-hq.jpg')}
                     alt="KNR Enterprises Headquarters and Distribution Facility"
                     className="w-full h-auto aspect-[16/11] object-cover"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/building-knr-hq.jpg';
+                      (e.target as HTMLImageElement).src = getAssetUrl('/building-knr-hq.jpg');
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0D2B5B]/60 via-transparent to-transparent flex items-end p-6">
@@ -404,11 +405,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     {/* Image Container with contain fit */}
                     <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-slate-50 mb-3.5 border border-slate-100 flex items-center justify-center p-3">
                       <img
-                        src={product.image}
+                        src={getAssetUrl(product.image)}
                         alt={product.name}
                         className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/hero-knr-products.jpg';
+                          (e.target as HTMLImageElement).src = getAssetUrl('/hero-knr-products.jpg');
                         }}
                       />
                     </div>

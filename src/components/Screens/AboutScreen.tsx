@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Screen, Language } from '../../types';
+import { getAssetUrl } from '../../utils/assets';
 import {
   Home,
   Award,
@@ -95,13 +96,13 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ onNavigate, language =
             <div className="lg:col-span-5 relative flex items-center justify-center lg:justify-end">
               <div className="relative w-full max-w-md lg:max-w-lg rounded-3xl overflow-hidden shadow-xl border border-[#E2E8F0] bg-white p-3 group">
                 <img
-                  src="/about-hero-building.jpg"
+                  src={getAssetUrl('/about-hero-building.jpg')}
                   alt="KNR Enterprises Commercial Facility"
                   className="w-full h-auto aspect-[16/10] object-cover rounded-2xl transition-transform duration-700 group-hover:scale-105"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     if (target.src.indexOf('building-knr-hq.jpg') === -1) {
-                      target.src = '/building-knr-hq.jpg';
+                      target.src = getAssetUrl('/building-knr-hq.jpg');
                     }
                   }}
                 />
@@ -163,7 +164,7 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ onNavigate, language =
                     <div className="relative w-full max-w-[220px] aspect-[4/5] rounded-2xl overflow-hidden border border-[#E2E8F0] shadow-sm bg-slate-100 flex items-center justify-center">
                       {!photoError ? (
                         <img
-                          src="/founder-k-narendar-reddy.jpg"
+                          src={getAssetUrl('/founder-k-narendar-reddy.jpg')}
                           alt="Mr. K. Narendar Reddy, Founder"
                           className="w-full h-full object-cover"
                           onError={() => setPhotoError(true)}
@@ -203,7 +204,7 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ onNavigate, language =
                     <div className="pt-2">
                       <div className="h-10 sm:h-12 flex items-center">
                         <img
-                          src="/founder-signature.png"
+                          src={getAssetUrl('/founder-signature.png')}
                           alt="K. Narendar Reddy Signature"
                           className="h-9 sm:h-11 w-auto object-contain"
                         />

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useWebsiteSettings } from '../../context/WebsiteSettingsContext';
 import { submitRfqEnquiry } from '../../services/enquiryService';
+import { getAssetUrl } from '../../utils/assets';
 
 interface ContactScreenProps {
   onNavigate?: (screen: Screen) => void;
@@ -188,11 +189,11 @@ export const ContactScreen: React.FC<ContactScreenProps> = ({ onNavigate }) => {
             <div className="lg:col-span-5 relative flex items-center justify-center lg:justify-end">
               <div className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-xl border border-[#E2E8F0] bg-white p-3">
                 <img
-                  src="/building-knr-hq.jpg"
+                  src={getAssetUrl('/building-knr-hq.jpg')}
                   alt="KNR Enterprises Chevella Central Depot"
                   className="w-full h-auto aspect-[16/10] object-cover rounded-2xl"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/hero-knr-products.jpg';
+                    (e.target as HTMLImageElement).src = getAssetUrl('/hero-knr-products.jpg');
                   }}
                 />
               </div>
@@ -279,7 +280,7 @@ export const ContactScreen: React.FC<ContactScreenProps> = ({ onNavigate }) => {
               title="Open KNR Enterprises on Google Maps"
             >
               <img
-                src="/contact-map-knr.jpg"
+                src={getAssetUrl('/contact-map-knr.jpg')}
                 alt="KNR Enterprises Chevella Location Map"
                 className="w-full h-auto aspect-[16/10] object-cover transition-transform duration-500 group-hover:scale-105"
                 onError={(e) => {

@@ -22,6 +22,7 @@ import {
 } from '../../services/productService';
 import { fetchCategories } from '../../services/categoryService';
 import { useWebsiteSettings } from '../../context/WebsiteSettingsContext';
+import { getAssetUrl } from '../../utils/assets';
 
 interface CatalogScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -128,11 +129,11 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
             <div className="lg:col-span-5 relative flex items-center justify-center lg:justify-end">
               <div className="relative w-full max-w-md lg:max-w-lg rounded-3xl overflow-hidden shadow-xl border border-[#E2E8F0] bg-white p-3 group">
                 <img
-                  src="/hero-knr-products.jpg"
+                  src={getAssetUrl('/hero-knr-products.jpg')}
                   alt="KNR Enterprises Product Catalog Showcase"
                   className="w-full h-auto aspect-[16/10] object-cover rounded-2xl transition-transform duration-700 group-hover:scale-105"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/hero-knr-products.jpg';
+                    (e.target as HTMLImageElement).src = getAssetUrl('/hero-knr-products.jpg');
                   }}
                 />
               </div>
@@ -222,11 +223,11 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                   {/* Image container using contain for industrial packaging */}
                   <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-slate-50 mb-3.5 border border-slate-100 flex items-center justify-center p-3">
                     <img
-                      src={product.image}
+                      src={getAssetUrl(product.image)}
                       alt={product.name}
                       className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/hero-knr-products.jpg';
+                        (e.target as HTMLImageElement).src = getAssetUrl('/hero-knr-products.jpg');
                       }}
                     />
                   </div>

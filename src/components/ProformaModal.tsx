@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CartItem, Language, ProformaInvoiceData, EnquiryItem } from '../types';
 import { TRANSLATIONS } from '../data/translations';
 import { submitRfqEnquiry } from '../services/enquiryService';
+import { getAssetUrl } from '../utils/assets';
 import {
   X,
   Printer,
@@ -161,7 +162,7 @@ export const ProformaModal: React.FC<ProformaModalProps> = ({
               <div>
                 <div className="flex items-center gap-3">
                   <img
-                    src="/logo.png"
+                    src={getAssetUrl('/logo.png')}
                     alt="KNR Enterprises - We Supply"
                     className="h-11 sm:h-12 w-auto max-w-[200px] object-contain"
                   />
