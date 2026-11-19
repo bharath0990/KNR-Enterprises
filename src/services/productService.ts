@@ -14,6 +14,7 @@ export interface CatalogItem {
   inStock: boolean;
   category: string;
   image: string;
+  moq?: number;
 }
 
 // Convert DB row to frontend Product model

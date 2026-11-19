@@ -84,7 +84,17 @@ export interface InventoryLog {
   createdAt: string;
 }
 
-export type EnquiryStatus = 'New' | 'Contacted' | 'Quotation Sent' | 'Approved' | 'Rejected' | 'Completed';
+export type EnquiryStatus = 
+  | 'New' 
+  | 'Contacted' 
+  | 'Quotation Preparing' 
+  | 'Quotation Sent' 
+  | 'Negotiation' 
+  | 'Order Confirmed' 
+  | 'Lost' 
+  | 'Approved' 
+  | 'Rejected' 
+  | 'Completed';
 
 export interface EnquiryItem {
   id?: string;
@@ -109,6 +119,15 @@ export interface CustomerEnquiry {
   mandal?: string;
   district?: string;
   state: string;
+  address?: string;
+  city?: string;
+  pincode?: string;
+  deliveryInstructions?: string;
+  expectedDeliveryDate?: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  gstin?: string;
+  followUpDate?: string;
   status: EnquiryStatus;
   notes?: string;
   internalNotes?: string;
@@ -119,6 +138,127 @@ export interface CustomerEnquiry {
   items?: EnquiryItem[];
   createdAt: string;
   updatedAt?: string;
+}
+
+export type QuotationStatus = 'Draft' | 'Sent' | 'Revised' | 'Accepted' | 'Declined' | 'Expired';
+
+export interface Quotation {
+  id: string;
+  quotationNumber: string;
+  enquiryId?: string;
+  customerName: string;
+  mobileNumber: string;
+  email: string;
+  organisation: string;
+  gstin: string;
+  deliveryAddress: string;
+  placeOfSupply: string;
+  taxType: 'INTRA_STATE' | 'INTER_STATE';
+  subtotal: number;
+  discountAmount: number;
+  taxableValue: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  totalGst: number;
+  transportCharges: number;
+  packagingCharges: number;
+  otherCharges: number;
+  grandTotal: number;
+  amountInWords: string;
+  validityDate: string;
+  paymentTerms: string;
+  deliveryTerms: string;
+  warrantyTerms: string;
+  notes: string;
+  termsAndConditions: string;
+  status: QuotationStatus;
+  version: number;
+  items?: QuotationItem[];
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuotationItem {
+  id: string;
+  quotationId: string;
+  productId?: string;
+  productName: string;
+  sku?: string;
+  hsnCode?: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  discountPercent: number;
+  taxableValue: number;
+  gstRate: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  totalPrice: number;
+  notes?: string;
+  createdAt?: string;
+}
+
+export interface EnquiryStatusHistoryItem {
+  id: string;
+  enquiryId: string;
+  previousStatus?: string;
+  newStatus: string;
+  notes?: string;
+  updatedBy: string;
+  createdAt: string;
+}
+
+export interface CommunicationLogItem {
+  id: string;
+  enquiryId: string;
+  quotationId?: string;
+  channel: 'whatsapp' | 'email' | 'phone' | 'in_person';
+  recipient: string;
+  subject?: string;
+  messagePreview?: string;
+  status: 'not_shared' | 'shared_manually' | 'sent' | 'delivered' | 'failed';
+  errorDetails?: string;
+  sentBy: string;
+  createdAt: string;
+}
+
+export interface ConfirmedOrder {
+  id: string;
+  orderNumber: string;
+  enquiryId?: string;
+  quotationId?: string;
+  customerName: string;
+  mobileNumber: string;
+  email?: string;
+  organisation?: string;
+  deliveryAddress?: string;
+  totalAmount: number;
+  agreedQuantitiesSummary?: string;
+  status: 'Confirmed' | 'Dispatched' | 'Completed' | 'Cancelled';
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface RfqSubmissionPayload {
+  customerName: string;
+  mobileNumber: string;
+  email: string;
+  organisation: string;
+  department?: string;
+  gstin?: string;
+  address: string;
+  city: string;
+  district: string;
+  state: string;
+  pincode: string;
+  deliveryInstructions?: string;
+  expectedDeliveryDate?: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  notes?: string;
 }
 
 export interface Testimonial {

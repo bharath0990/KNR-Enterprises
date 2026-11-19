@@ -15,6 +15,15 @@ function mapDbEnquiry(row: Record<string, unknown>, items: EnquiryItem[] = []): 
     mandal: row.mandal ? String(row.mandal) : undefined,
     district: row.district ? String(row.district) : undefined,
     state: String(row.state || 'Telangana'),
+    address: row.address ? String(row.address) : undefined,
+    city: row.city ? String(row.city) : undefined,
+    pincode: row.pincode ? String(row.pincode) : undefined,
+    deliveryInstructions: row.delivery_instructions ? String(row.delivery_instructions) : undefined,
+    expectedDeliveryDate: row.expected_delivery_date ? String(row.expected_delivery_date) : undefined,
+    attachmentUrl: row.attachment_url ? String(row.attachment_url) : undefined,
+    attachmentName: row.attachment_name ? String(row.attachment_name) : undefined,
+    gstin: row.gstin ? String(row.gstin) : undefined,
+    followUpDate: row.follow_up_date ? String(row.follow_up_date) : undefined,
     status: (row.status as EnquiryStatus) || 'New',
     notes: row.notes ? String(row.notes) : undefined,
     internalNotes: row.internal_notes ? String(row.internal_notes) : undefined,
@@ -226,6 +235,14 @@ export async function submitRfqEnquiry(
     mandal?: string;
     district?: string;
     state?: string;
+    address?: string;
+    city?: string;
+    pincode?: string;
+    deliveryInstructions?: string;
+    expectedDeliveryDate?: string;
+    attachmentUrl?: string;
+    attachmentName?: string;
+    gstin?: string;
     notes?: string;
     source?: string;
   },
@@ -235,7 +252,9 @@ export async function submitRfqEnquiry(
   const estimatedGst = Math.round(subtotal * 0.18);
   const totalAmount = subtotal + estimatedGst;
 
-  const enquiryNumber = `KNR-RFQ-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const year = new Date().getFullYear();
+  const randNum = Math.floor(10000 + Math.random() * 90000);
+  const enquiryNumber = `KNR-RFQ-${year}-${randNum}`;
 
   const newEnquiry: CustomerEnquiry = {
     id: `enq-${Date.now()}`,
@@ -248,6 +267,14 @@ export async function submitRfqEnquiry(
     mandal: customerDetails.mandal || '',
     district: customerDetails.district || '',
     state: customerDetails.state || 'Telangana',
+    address: customerDetails.address || '',
+    city: customerDetails.city || '',
+    pincode: customerDetails.pincode || '',
+    deliveryInstructions: customerDetails.deliveryInstructions || '',
+    expectedDeliveryDate: customerDetails.expectedDeliveryDate || '',
+    attachmentUrl: customerDetails.attachmentUrl || '',
+    attachmentName: customerDetails.attachmentName || '',
+    gstin: customerDetails.gstin || '',
     status: 'New',
     notes: customerDetails.notes || '',
     internalNotes: '',
@@ -273,6 +300,14 @@ export async function submitRfqEnquiry(
           mandal: newEnquiry.mandal,
           district: newEnquiry.district,
           state: newEnquiry.state,
+          address: newEnquiry.address,
+          city: newEnquiry.city,
+          pincode: newEnquiry.pincode,
+          delivery_instructions: newEnquiry.deliveryInstructions,
+          expected_delivery_date: newEnquiry.expectedDeliveryDate,
+          attachment_url: newEnquiry.attachmentUrl,
+          attachment_name: newEnquiry.attachmentName,
+          gstin: newEnquiry.gstin,
           status: 'New',
           notes: newEnquiry.notes,
           subtotal: newEnquiry.subtotal,

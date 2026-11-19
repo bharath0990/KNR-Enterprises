@@ -12,17 +12,21 @@ import {
   MessageCircle,
   Tag,
   Filter,
-  Package
+  Package,
+  Eye,
+  Info,
 } from 'lucide-react';
 import {
   getCatalogProducts,
   formatINR,
   CatalogItem,
   fetchProducts,
+  catalogItemToProduct,
 } from '../../services/productService';
 import { fetchCategories } from '../../services/categoryService';
 import { useWebsiteSettings } from '../../context/WebsiteSettingsContext';
 import { getAssetUrl } from '../../utils/assets';
+import { ProductDetailModal } from '../ProductDetailModal';
 
 interface CatalogScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -49,6 +53,8 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   const [categoryFilter, setCategoryFilter] = useState<string>(
     initialCategory === 'all' ? 'All Products' : initialCategory
   );
+  const [selectedProductForDetail, setSelectedProductForDetail] = useState<Product | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Load live products & categories
   useEffect(() => {
@@ -196,6 +202,24 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           3. PRODUCTS GRID (Responsive 4-column layout with object-contain images)
          ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+        {/* Indicative Pricing Disclaimer Banner */}
+        <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-amber-50/80 border border-amber-200/90 shadow-xs flex items-start gap-3.5">
+          <div className="p-2.5 bg-amber-100 text-amber-800 rounded-xl shrink-0 mt-0.5">
+            <Tag className="w-5 h-5 text-amber-700" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-xs sm:text-sm font-bold text-amber-950 flex items-center gap-1.5">
+              <span>Wholesale Indicative Pricing Notice</span>
+              <span className="text-[10px] font-semibold text-amber-700 bg-amber-200/60 px-2 py-0.5 rounded-full uppercase">
+                B2B Bulk Estimates
+              </span>
+            </h4>
+            <p className="text-xs text-amber-900/90 leading-relaxed">
+              Prices displayed on this website are indicative estimates. Final prices may vary depending on order quantity, specifications, availability, transportation and applicable taxes. A confirmed quotation will be provided by KNR Enterprises.
+            </p>
+          </div>
+        </div>
+
         {filteredProducts.length === 0 ? (
           <div className="py-20 text-center bg-white rounded-3xl border border-[#E2E8F0] p-8 shadow-xs">
             <h3 className="text-lg font-bold text-[#111827]">No products found</h3>
@@ -221,7 +245,13 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
               >
                 <div>
                   {/* Image container using contain for industrial packaging */}
-                  <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-slate-50 mb-3.5 border border-slate-100 flex items-center justify-center p-3">
+                  <div
+                    onClick={() => {
+                      setSelectedProductForDetail(catalogItemToProduct(product));
+                      setIsDetailModalOpen(true);
+                    }}
+                    className="relative rounded-xl overflow-hidden aspect-[4/3] bg-slate-50 mb-3.5 border border-slate-100 flex items-center justify-center p-3 cursor-pointer group-hover:border-orange-200 transition-colors"
+                  >
                     <img
                       src={getAssetUrl(product.image)}
                       alt={product.name}
@@ -230,6 +260,9 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                         (e.target as HTMLImageElement).src = getAssetUrl('/hero-knr-products.jpg');
                       }}
                     />
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-xs p-1.5 rounded-lg shadow-xs text-slate-700 hover:text-[#F57C00]">
+                      <Eye className="w-3.5 h-3.5" />
+                    </div>
                   </div>
 
                   {/* Category Pill */}
@@ -237,7 +270,13 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                     {product.category}
                   </span>
 
-                  <h3 className="text-sm font-bold text-[#111827] tracking-tight leading-snug mt-2 line-clamp-2 min-h-[40px]">
+                  <h3
+                    onClick={() => {
+                      setSelectedProductForDetail(catalogItemToProduct(product));
+                      setIsDetailModalOpen(true);
+                    }}
+                    className="text-sm font-bold text-[#111827] tracking-tight leading-snug mt-2 line-clamp-2 min-h-[40px] hover:text-[#F57C00] cursor-pointer transition-colors"
+                  >
                     {product.name}
                   </h3>
 
@@ -246,13 +285,18 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                   </p>
 
                   {/* Price */}
-                  <div className="mt-3 flex items-baseline gap-1.5">
-                    <span className="text-lg font-black text-[#111827]">
-                      {formatINR(product.price)}
+                  <div className="mt-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Estimated Price
                     </span>
-                    <span className="text-xs font-semibold text-[#64748B]">
-                      / {product.unit}
-                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-lg font-black text-[#111827]">
+                        {formatINR(product.price)}
+                      </span>
+                      <span className="text-xs font-semibold text-[#64748B]">
+                        / {product.unit}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Stock & MOQ Info */}
@@ -261,11 +305,13 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>{product.inStock ? 'In Stock' : 'Out of Stock'}</span>
                     </div>
-                    <span className="text-[#64748B] font-mono">MOQ: {product.unit}</span>
+                    <span className="text-[#64748B] font-mono text-[11px]">
+                      MOQ: {product.moq ? `${product.moq} ${product.unit}` : `1 ${product.unit}`}
+                    </span>
                   </div>
                 </div>
 
-                {/* Actions: Add to RFQ Cart & WhatsApp Enquiry */}
+                {/* Actions: Add to RFQ Cart, View Details & WhatsApp Enquiry */}
                 <div className="mt-4 space-y-2">
                   <button
                     onClick={() => onAddToCart && onAddToCart(product)}
@@ -275,13 +321,26 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                     <span>Add to RFQ Cart</span>
                   </button>
 
-                  <button
-                    onClick={() => handleEnquire(product)}
-                    className="w-full bg-[#F8FAFC] hover:bg-orange-50 hover:text-[#F57C00] border border-[#E2E8F0] text-slate-700 font-semibold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5 text-[#16A34A]" />
-                    <span>WhatsApp Quote</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedProductForDetail(catalogItemToProduct(product));
+                        setIsDetailModalOpen(true);
+                      }}
+                      className="w-full bg-[#F8FAFC] hover:bg-slate-100 text-[#111827] border border-[#E2E8F0] font-semibold text-xs py-2 px-2.5 rounded-xl flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-[#F57C00]" />
+                      <span>Details</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleEnquire(product)}
+                      className="w-full bg-[#F8FAFC] hover:bg-emerald-50 hover:text-emerald-700 border border-[#E2E8F0] text-slate-700 font-semibold text-xs py-2 px-2.5 rounded-xl flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-[#16A34A]" />
+                      <span>WhatsApp</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -312,6 +371,24 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           </button>
         </div>
       </section>
+
+      {/* Product Detail Modal */}
+      {selectedProductForDetail && (
+        <ProductDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setSelectedProductForDetail(null);
+          }}
+          product={selectedProductForDetail}
+          onAddToCart={(product, quantity) => {
+            if (onAddToCart) {
+              onAddToCart({ ...product, quantity } as any);
+            }
+          }}
+          language={language}
+        />
+      )}
     </div>
   );
 };

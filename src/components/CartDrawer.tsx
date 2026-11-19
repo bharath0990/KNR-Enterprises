@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   ArrowRight,
   MessageCircle,
+  FileText,
 } from 'lucide-react';
 import { submitRfqEnquiry } from '../services/enquiryService';
 import { useWebsiteSettings } from '../context/WebsiteSettingsContext';
@@ -20,6 +21,7 @@ interface CartDrawerProps {
   onRemoveItem: (productId: string) => void;
   onClearCart: () => void;
   onOpenProforma?: () => void;
+  onOpenRfqForm?: () => void;
   language: Language;
   onBrowseProducts: () => void;
 }
@@ -32,6 +34,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onRemoveItem,
   onClearCart,
   onOpenProforma,
+  onOpenRfqForm,
   language,
   onBrowseProducts,
 }) => {
@@ -258,21 +261,34 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </div>
 
               <div className="space-y-2 pt-1">
+                {onOpenRfqForm && (
+                  <button
+                    onClick={() => {
+                      onClose();
+                      onOpenRfqForm();
+                    }}
+                    className="w-full bg-[#F57C00] hover:bg-[#E06D00] text-white font-bold text-xs sm:text-sm py-3 px-4 rounded-xl shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>Proceed to Official RFQ Form</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+
                 <button
                   onClick={handleWhatsAppCheckout}
-                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm py-3 px-4 rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
                 >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Order on WhatsApp</span>
+                  <MessageCircle className="w-4 h-4 text-emerald-400" />
+                  <span>Quick RFQ via WhatsApp</span>
                 </button>
 
                 {onOpenProforma && (
                   <button
                     onClick={onOpenProforma}
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full bg-slate-100 hover:bg-slate-200 text-[#111827] font-semibold text-xs py-2 px-4 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span>Generate Proforma Invoice</span>
-                    <ArrowRight className="w-4 h-4" />
                   </button>
                 )}
               </div>

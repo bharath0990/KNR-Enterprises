@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { CartDrawer } from './components/CartDrawer';
 import { ProformaModal } from './components/ProformaModal';
+import { RfqSubmissionModal } from './components/RfqSubmissionModal';
 import { HomeScreen } from './components/Screens/HomeScreen';
 import { CatalogScreen } from './components/Screens/CatalogScreen';
 import { AboutScreen } from './components/Screens/AboutScreen';
@@ -41,6 +42,7 @@ function AppContent() {
   const [language, setLanguage] = useState<Language>('en');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isProformaOpen, setIsProformaOpen] = useState(false);
+  const [isRfqModalOpen, setIsRfqModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -266,6 +268,7 @@ function AppContent() {
           <HomeScreen
             onNavigate={handleNavigate}
             onAddToCart={handleAddToCart}
+            onRequestQuote={() => setIsRfqModalOpen(true)}
             onSelectCategory={(cat) => {
               setSelectedCategory(cat);
               handleNavigate('products');
@@ -401,8 +404,21 @@ function AppContent() {
           setIsCartOpen(false);
           setIsProformaOpen(true);
         }}
+        onOpenRfqForm={() => {
+          setIsCartOpen(false);
+          setIsRfqModalOpen(true);
+        }}
         language={language}
         onBrowseProducts={() => handleNavigate('products')}
+      />
+
+      {/* Official B2B Wholesale RFQ Submission Modal */}
+      <RfqSubmissionModal
+        isOpen={isRfqModalOpen}
+        onClose={() => setIsRfqModalOpen(false)}
+        items={cartItems}
+        onClearCart={handleClearCart}
+        language={language}
       />
 
       {/* Official GST-3B Proforma Invoice Modal */}

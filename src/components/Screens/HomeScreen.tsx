@@ -23,18 +23,22 @@ import {
   Send,
   Building,
   Star,
-  ExternalLink
+  ExternalLink,
+  Eye,
+  Tag,
 } from 'lucide-react';
-import { getCatalogProducts, formatINR, CatalogItem, fetchProducts } from '../../services/productService';
+import { getCatalogProducts, formatINR, CatalogItem, fetchProducts, catalogItemToProduct } from '../../services/productService';
 import { fetchCategories } from '../../services/categoryService';
 import { useWebsiteSettings } from '../../context/WebsiteSettingsContext';
 import { TESTIMONIALS, FAQS_DATA } from '../../data/products';
 import { submitRfqEnquiry } from '../../services/enquiryService';
+import { ProductDetailModal } from '../ProductDetailModal';
 
 interface HomeScreenProps {
   onNavigate: (screen: Screen) => void;
   onAddToCart?: (product: Product | CatalogItem) => void;
   onSelectCategory: (category: string) => void;
+  onRequestQuote?: () => void;
   language?: Language;
 }
 
@@ -42,6 +46,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigate,
   onAddToCart,
   onSelectCategory,
+  onRequestQuote,
   language = 'en',
 }) => {
   const { homepageContent, settings } = useWebsiteSettings();
@@ -49,6 +54,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCatFilter, setSelectedCatFilter] = useState<string>('All');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [selectedProductForDetail, setSelectedProductForDetail] = useState<Product | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // RFQ Form state
   const [rfqName, setRfqName] = useState('');
@@ -165,7 +172,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </button>
 
                   <button
-                    onClick={() => onNavigate('contact')}
+                    onClick={() => (onRequestQuote ? onRequestQuote() : onNavigate('contact'))}
                     className="bg-white border-2 border-[#0D2B5B] text-[#0D2B5B] hover:bg-[#0D2B5B] hover:text-white font-bold text-sm sm:text-base px-6 py-3.5 rounded-full transition-all shadow-xs flex items-center gap-2 cursor-pointer"
                   >
                     <span>Request a Bulk Quote</span>
@@ -403,7 +410,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 >
                   <div>
                     {/* Image Container with contain fit */}
-                    <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-slate-50 mb-3.5 border border-slate-100 flex items-center justify-center p-3">
+                    <div
+                      onClick={() => {
+                        setSelectedProductForDetail(catalogItemToProduct(product));
+                        setIsDetailModalOpen(true);
+                      }}
+                      className="relative rounded-xl overflow-hidden aspect-[4/3] bg-slate-50 mb-3.5 border border-slate-100 flex items-center justify-center p-3 cursor-pointer group-hover:border-orange-200 transition-colors"
+                    >
                       <img
                         src={getAssetUrl(product.image)}
                         alt={product.name}
@@ -412,6 +425,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                           (e.target as HTMLImageElement).src = getAssetUrl('/hero-knr-products.jpg');
                         }}
                       />
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-xs p-1.5 rounded-lg shadow-xs text-slate-700 hover:text-[#F57C00]">
+                        <Eye className="w-3.5 h-3.5" />
+                      </div>
                     </div>
 
                     {/* Category pill */}
@@ -419,7 +435,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       {product.category}
                     </span>
 
-                    <h3 className="text-sm font-bold text-[#111827] tracking-tight leading-snug mt-2 line-clamp-2 min-h-[40px]">
+                    <h3
+                      onClick={() => {
+                        setSelectedProductForDetail(catalogItemToProduct(product));
+                        setIsDetailModalOpen(true);
+                      }}
+                      className="text-sm font-bold text-[#111827] tracking-tight leading-snug mt-2 line-clamp-2 min-h-[40px] hover:text-[#F57C00] cursor-pointer transition-colors"
+                    >
                       {product.name}
                     </h3>
 
@@ -428,13 +450,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     </p>
 
                     {/* Pricing */}
-                    <div className="mt-3 flex items-baseline gap-1.5">
-                      <span className="text-lg font-black text-[#111827]">
-                        {formatINR(product.price)}
+                    <div className="mt-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        Estimated Price
                       </span>
-                      <span className="text-xs font-semibold text-[#64748B]">
-                        / {product.unit}
-                      </span>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-lg font-black text-[#111827]">
+                          {formatINR(product.price)}
+                        </span>
+                        <span className="text-xs font-semibold text-[#64748B]">
+                          / {product.unit}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Stock & MOQ Info */}
@@ -443,18 +470,33 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>{product.inStock ? 'In Stock' : 'Out of Stock'}</span>
                       </div>
-                      <span className="text-[#64748B] font-mono">MOQ: {product.unit}</span>
+                      <span className="text-[#64748B] font-mono text-[11px]">
+                        MOQ: {product.moq ? `${product.moq} ${product.unit}` : `1 ${product.unit}`}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Add to RFQ Cart Button */}
-                  <button
-                    onClick={() => onAddToCart && onAddToCart(product)}
-                    className="w-full mt-4 bg-[#F57C00] hover:bg-[#E06D00] text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs hover:shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    <span>Add to RFQ Cart</span>
-                  </button>
+                  {/* Add to RFQ Cart Button & View Details */}
+                  <div className="mt-4 space-y-2">
+                    <button
+                      onClick={() => onAddToCart && onAddToCart(product)}
+                      className="w-full bg-[#F57C00] hover:bg-[#E06D00] text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs hover:shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      <span>Add to RFQ Cart</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedProductForDetail(catalogItemToProduct(product));
+                        setIsDetailModalOpen(true);
+                      }}
+                      className="w-full bg-[#F8FAFC] hover:bg-slate-100 text-[#111827] border border-[#E2E8F0] font-semibold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-[#F57C00]" />
+                      <span>View Specifications</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -973,6 +1015,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Product Detail Modal */}
+      {selectedProductForDetail && (
+        <ProductDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setSelectedProductForDetail(null);
+          }}
+          product={selectedProductForDetail}
+          onAddToCart={(product, quantity) => {
+            if (onAddToCart) {
+              onAddToCart({ ...product, quantity } as any);
+            }
+          }}
+          language={language}
+        />
+      )}
     </div>
   );
 };
