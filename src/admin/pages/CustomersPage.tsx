@@ -358,3 +358,4 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onViewEnquiry }) =
     </div>
   );
 };
+
