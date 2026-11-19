@@ -8,11 +8,15 @@ export type AdminTab =
   | 'categories'
   | 'inventory'
   | 'enquiries'
+  | 'customers'
+  | 'analytics'
   | 'website-content'
+  | 'content'
   | 'testimonials'
   | 'faqs'
   | 'services'
   | 'website-settings'
+  | 'settings'
   | 'admin-profile';
 
 export interface Product {
@@ -251,4 +255,19 @@ export interface CatalogFilterState {
   moqTier: string;
   minRating: number;
   sortBy: 'popularity' | 'price-asc' | 'price-desc' | 'rating';
+}
+
+export type RealtimeConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'reconnecting';
+
+export interface AdminNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'rfq' | 'contact' | 'product' | 'inventory' | 'status';
+  timestamp: string;
+  read: boolean;
+  referenceId?: string;
+  referenceTab?: AdminTab;
+  customerName?: string;
+  amount?: number;
 }

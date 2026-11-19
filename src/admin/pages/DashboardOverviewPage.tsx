@@ -138,7 +138,7 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
 
           <button
             onClick={onAddNewProduct}
-            className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md shadow-blue-600/25 transition-all flex items-center gap-2 cursor-pointer"
+            className="bg-[#F57C00] hover:bg-[#E06D00] active:scale-95 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md shadow-orange-500/25 transition-all flex items-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Product</span>
@@ -154,7 +154,7 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
           value={totalProducts}
           subtitle="In Catalog"
           icon={Package}
-          color="blue"
+          color="orange"
           onClick={() => onNavigateTab('products')}
         />
 

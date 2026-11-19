@@ -1,17 +1,27 @@
-import React, { useState } from 'react';
-import { AdminTab, AdminProfile } from '../../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { AdminTab, AdminProfile, AdminNotification } from '../../types';
 import {
   Menu,
   Bell,
   ExternalLink,
-  Database,
   ChevronRight,
   Shield,
   User,
   LogOut,
   CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  ShoppingCart,
+  MessageCircle,
+  Package,
+  Boxes,
+  Clock,
+  Trash2,
+  Check,
 } from 'lucide-react';
-import { isSupabaseConfigured } from '../../lib/supabase';
+import { useRealtime } from '../../context/RealtimeContext';
 
 interface AdminHeaderProps {
   currentTab: AdminTab;
@@ -22,6 +32,7 @@ interface AdminHeaderProps {
   onLogout: () => void;
   onSelectTab: (tab: AdminTab) => void;
   pendingEnquiriesCount?: number;
+  onOpenNotificationReference?: (referenceId: string, referenceTab?: AdminTab) => void;
 }
 
 const tabTitles: Record<AdminTab, string> = {
@@ -30,11 +41,15 @@ const tabTitles: Record<AdminTab, string> = {
   categories: 'Category Management',
   inventory: 'Inventory & Stock Logs',
   enquiries: 'Customer RFQ Enquiries',
+  customers: 'Customer Directory',
+  analytics: 'Procurement Analytics',
   'website-content': 'Website Content Management',
+  content: 'Website Content Management',
   testimonials: 'Customer Testimonials',
   faqs: 'FAQs & Knowledge Base',
   services: 'Institutional Services',
   'website-settings': 'Website Control Settings',
+  settings: 'Website Control Settings',
   'admin-profile': 'Administrator Profile & Security',
 };
 
@@ -46,20 +61,99 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   user,
   onLogout,
   onSelectTab,
-  pendingEnquiriesCount = 0,
+  onOpenNotificationReference,
 }) => {
+  const {
+    connectionStatus,
+    lastSyncTime,
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    clearNotifications,
+  } = useRealtime();
+
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const isDbConnected = isSupabaseConfigured();
+
+  const notifRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close popovers on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const formatSyncTime = (date: Date) => {
+    try {
+      return date.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return 'Just now';
+    }
+  };
+
+  const formatNotifTime = (isoString: string) => {
+    try {
+      const diffMs = Date.now() - new Date(isoString).getTime();
+      const mins = Math.floor(diffMs / 60000);
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      return new Date(isoString).toLocaleDateString('en-IN');
+    } catch {
+      return 'Recently';
+    }
+  };
+
+  const getNotifIcon = (type: AdminNotification['type']) => {
+    switch (type) {
+      case 'rfq':
+        return <ShoppingCart className="w-4 h-4 text-[#F57C00]" />;
+      case 'contact':
+        return <MessageCircle className="w-4 h-4 text-blue-500" />;
+      case 'inventory':
+        return <Boxes className="w-4 h-4 text-amber-500" />;
+      case 'product':
+        return <Package className="w-4 h-4 text-purple-500" />;
+      default:
+        return <Bell className="w-4 h-4 text-[#F57C00]" />;
+    }
+  };
+
+  const handleNotificationClick = (notif: AdminNotification) => {
+    markAsRead(notif.id);
+    setShowNotifications(false);
+    if (onOpenNotificationReference && notif.referenceId) {
+      onOpenNotificationReference(notif.referenceId, notif.referenceTab);
+    } else if (notif.referenceTab) {
+      onSelectTab(notif.referenceTab);
+    }
+  };
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 h-16 sm:h-20 px-4 sm:px-6 flex items-center justify-between transition-all">
-      {/* 1. Left: Mobile menu toggle + Breadcrumb */}
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] h-16 sm:h-20 px-4 sm:px-6 flex items-center justify-between transition-all shadow-xs">
+      {/* 1. Left: Mobile menu toggle + Desktop collapse toggle + Breadcrumb */}
       <div className="flex items-center gap-3">
         {/* Mobile menu button */}
         <button
           onClick={onMobileOpenSidebar}
-          className="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+          className="md:hidden p-2 text-slate-600 hover:text-[#111827] rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
           aria-label="Toggle mobile sidebar"
         >
           <Menu className="w-5 h-5" />
@@ -68,7 +162,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         {/* Desktop collapse toggle */}
         <button
           onClick={onToggleSidebar}
-          className="hidden md:flex p-2 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+          className="hidden md:flex p-2 text-slate-500 hover:text-[#111827] rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
           title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
           <Menu className="w-5 h-5" />
@@ -76,124 +170,194 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
         {/* Breadcrumb Navigation */}
         <nav className="flex items-center space-x-1.5 text-xs sm:text-sm font-medium text-slate-500">
-          <span className="hidden sm:inline hover:text-slate-800">Admin</span>
+          <span className="hidden sm:inline hover:text-[#111827]">Admin</span>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400 hidden sm:inline" />
-          <span className="font-bold text-slate-900">
+          <span className="font-bold text-[#111827]">
             {tabTitles[currentTab] || 'Dashboard'}
           </span>
         </nav>
       </div>
 
-      {/* 2. Right: Database status + View site + Notifications + User profile */}
+      {/* 2. Right: Real-time Connection Status + Notification Bell + User Profile */}
       <div className="flex items-center space-x-2 sm:space-x-4">
-        {/* Supabase Status Pill */}
+        {/* Real-time Connection Status Pill */}
         <div
-          className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${
-            isDbConnected
+          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold border transition-colors ${
+            connectionStatus === 'connected'
               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              : 'bg-amber-50 text-amber-700 border-amber-200'
+              : connectionStatus === 'connecting' || connectionStatus === 'reconnecting'
+              ? 'bg-amber-50 text-amber-700 border-amber-200'
+              : 'bg-rose-50 text-rose-700 border-rose-200'
           }`}
-          title={
-            isDbConnected
-              ? 'Supabase PostgreSQL & Storage Connected'
-              : 'Running in Local Storage Development Mode. Configure VITE_SUPABASE_URL in .env to connect to live Supabase.'
-          }
+          title={`Realtime Status: ${connectionStatus}. Last synchronization: ${formatSyncTime(lastSyncTime)}`}
         >
-          <Database className={`w-3.5 h-3.5 ${isDbConnected ? 'text-emerald-500' : 'text-amber-500'}`} />
-          <span>{isDbConnected ? 'Supabase Live' : 'Local Dev Store'}</span>
+          {connectionStatus === 'connected' ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="capitalize hidden sm:inline">Connected</span>
+              <span className="text-[10px] text-emerald-600 font-normal hidden lg:inline">
+                • {formatSyncTime(lastSyncTime)}
+              </span>
+            </>
+          ) : connectionStatus === 'reconnecting' || connectionStatus === 'connecting' ? (
+            <>
+              <RefreshCw className="w-3 h-3 text-amber-600 animate-spin" />
+              <span className="capitalize">{connectionStatus}</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="w-3 h-3 text-rose-500" />
+              <span>Offline</span>
+            </>
+          )}
         </div>
 
-        {/* View Public Website */}
-        <a
-          href="/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-blue-600 px-3 py-1.5 rounded-xl border border-slate-200 hover:border-blue-200 bg-white hover:bg-blue-50/50 transition-all cursor-pointer"
-        >
-          <span>View Website</span>
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-
-        {/* Notification Bell */}
-        <div className="relative">
+        {/* Notification Bell Dropdown */}
+        <div className="relative" ref={notifRef}>
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="p-2 text-slate-600 hover:text-slate-900 rounded-full hover:bg-slate-100 transition-colors relative cursor-pointer"
-            aria-label="Notifications"
+            className="p-2 text-slate-500 hover:text-[#111827] rounded-xl hover:bg-slate-100 transition-colors relative cursor-pointer"
+            aria-label="Open notifications"
           >
             <Bell className="w-5 h-5" />
-            {pendingEnquiriesCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-[#F57C00] text-white text-[10px] font-black rounded-full flex items-center justify-center animate-pulse">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
             )}
           </button>
 
-          {/* Notifications Dropdown */}
+          {/* Notifications Popover */}
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 z-50 animate-fadeIn">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Admin Notifications
-                </h4>
-                <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-full">
-                  {pendingEnquiriesCount} New
-                </span>
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-[#E2E8F0] z-50 overflow-hidden animate-fadeIn">
+              {/* Header */}
+              <div className="px-4 py-3 bg-[#F8FAFC] border-b border-[#E2E8F0] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-[#111827]">Live Notifications</h4>
+                  {unreadCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FFF3E0] text-[#F57C00]">
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="text-[11px] font-semibold text-[#F57C00] hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    <Check className="w-3 h-3" />
+                    <span>Mark all read</span>
+                  </button>
+                )}
               </div>
 
-              <div className="py-2 space-y-2 max-h-60 overflow-y-auto">
-                {pendingEnquiriesCount > 0 ? (
-                  <div
+              {/* Notification List */}
+              <div className="max-h-80 overflow-y-auto divide-y divide-[#E2E8F0] custom-scrollbar">
+                {notifications.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400 px-4">
+                    <Bell className="w-8 h-8 mx-auto text-slate-300 mb-2 opacity-50" />
+                    <p className="text-xs font-bold text-slate-700">No notifications</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      New customer RFQs and catalog events will appear here in real time.
+                    </p>
+                  </div>
+                ) : (
+                  notifications.slice(0, 15).map((notif) => (
+                    <div
+                      key={notif.id}
+                      onClick={() => handleNotificationClick(notif)}
+                      className={`p-3.5 hover:bg-[#F8FAFC] transition-colors cursor-pointer flex items-start gap-3 ${
+                        !notif.read ? 'bg-orange-50/40' : ''
+                      }`}
+                    >
+                      <div className="p-2 rounded-xl bg-white border border-[#E2E8F0] shrink-0 mt-0.5 shadow-xs">
+                        {getNotifIcon(notif.type)}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <h5 className="text-xs font-bold text-[#111827] truncate">
+                            {notif.title}
+                          </h5>
+                          <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                            {formatNotifTime(notif.timestamp)}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#64748B] mt-0.5 line-clamp-2 leading-relaxed">
+                          {notif.message}
+                        </p>
+                        {notif.amount && (
+                          <div className="text-[10px] font-mono font-bold text-[#16A34A] mt-1">
+                            Est. ₹{notif.amount.toLocaleString('en-IN')}
+                          </div>
+                        )}
+                      </div>
+
+                      {!notif.read && (
+                        <span className="w-2 h-2 rounded-full bg-[#F57C00] shrink-0 mt-1.5" />
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Footer */}
+              {notifications.length > 0 && (
+                <div className="p-2.5 bg-[#F8FAFC] border-t border-[#E2E8F0] flex items-center justify-between text-xs">
+                  <button
                     onClick={() => {
                       onSelectTab('enquiries');
                       setShowNotifications(false);
                     }}
-                    className="p-2.5 rounded-xl bg-blue-50/50 hover:bg-blue-50 border border-blue-100 transition-colors cursor-pointer text-left"
+                    className="text-[11px] font-bold text-[#F57C00] hover:underline cursor-pointer"
                   >
-                    <div className="text-xs font-bold text-blue-900">
-                      Pending RFQ Enquiries
-                    </div>
-                    <div className="text-[11px] text-blue-700 mt-0.5">
-                      You have {pendingEnquiriesCount} new customer enquiry requiring response.
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-4 text-center text-xs text-slate-500">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
-                    All customer RFQ enquiries are up to date.
-                  </div>
-                )}
-              </div>
+                    View All Enquiries →
+                  </button>
+
+                  <button
+                    onClick={clearNotifications}
+                    className="text-[11px] text-slate-400 hover:text-rose-600 flex items-center gap-1 cursor-pointer"
+                    title="Clear notification list"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Clear list</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Admin User Avatar & Dropdown */}
-        <div className="relative">
+        {/* User Profile Menu */}
+        <div className="relative" ref={userMenuRef}>
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label="User profile menu"
           >
-            <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-              {user?.fullName ? user.fullName.slice(0, 2).toUpperCase() : 'AD'}
+            <div className="w-8 h-8 rounded-lg bg-[#FFF3E0] text-[#F57C00] font-black text-xs flex items-center justify-center border border-orange-200 shadow-xs">
+              {(user?.fullName || 'A').charAt(0).toUpperCase()}
             </div>
-            <div className="hidden lg:block text-left leading-tight">
-              <span className="text-xs font-bold text-slate-900 block truncate max-w-[120px]">
+            <div className="hidden lg:block text-left text-xs">
+              <span className="font-bold text-[#111827] block truncate max-w-[120px]">
                 {user?.fullName || 'Administrator'}
               </span>
-              <span className="text-[10px] text-slate-500 block capitalize">
+              <span className="text-[10px] text-slate-400 block capitalize">
                 {user?.role || 'Admin'}
               </span>
             </div>
           </button>
 
           {showUserMenu && (
-            <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-2xl py-2 z-50 animate-fadeIn">
-              <div className="px-4 py-2 border-b border-slate-100">
-                <p className="text-xs font-bold text-slate-900 truncate">
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#E2E8F0] p-2 z-50 animate-fadeIn text-xs">
+              <div className="p-3 border-b border-[#E2E8F0] mb-1">
+                <div className="font-bold text-[#111827] truncate">
                   {user?.fullName || 'Administrator'}
-                </p>
-                <p className="text-[11px] text-slate-500 truncate">
-                  {user?.email || 'admin@knrenterprises.in'}
-                </p>
+                </div>
+                <div className="text-[11px] text-slate-400 truncate">
+                  {user?.email || 'admin@knrenterprises.com'}
+                </div>
               </div>
 
               <button
@@ -201,10 +365,10 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                   onSelectTab('admin-profile');
                   setShowUserMenu(false);
                 }}
-                className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                className="w-full flex items-center gap-2 px-3 py-2 text-slate-700 hover:text-[#F57C00] hover:bg-[#FFF3E0] rounded-xl transition-colors text-left cursor-pointer"
               >
-                <User className="w-4 h-4 text-slate-400" />
-                <span>My Profile &amp; Password</span>
+                <User className="w-4 h-4" />
+                <span>Admin Profile & Security</span>
               </button>
 
               <button
@@ -212,24 +376,24 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                   onSelectTab('website-settings');
                   setShowUserMenu(false);
                 }}
-                className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                className="w-full flex items-center gap-2 px-3 py-2 text-slate-700 hover:text-[#F57C00] hover:bg-[#FFF3E0] rounded-xl transition-colors text-left cursor-pointer"
               >
-                <Shield className="w-4 h-4 text-slate-400" />
-                <span>Website Controls</span>
+                <Shield className="w-4 h-4" />
+                <span>Website Settings</span>
               </button>
 
-              <div className="pt-1 mt-1 border-t border-slate-100">
-                <button
-                  onClick={() => {
-                    setShowUserMenu(false);
-                    onLogout();
-                  }}
-                  className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4 text-rose-500" />
-                  <span>Logout</span>
-                </button>
-              </div>
+              <div className="my-1 border-t border-[#E2E8F0]" />
+
+              <button
+                onClick={() => {
+                  setShowUserMenu(false);
+                  onLogout();
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors text-left font-semibold cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Log Out</span>
+              </button>
             </div>
           )}
         </div>
@@ -237,4 +401,3 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
     </header>
   );
 };
-

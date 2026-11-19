@@ -24,3 +24,4 @@ export function getAssetUrl(path: string | undefined | null): string {
 
   return `${prefix}${cleanPath}`;
 }
+

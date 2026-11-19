@@ -6,6 +6,8 @@ import {
   Layers,
   Boxes,
   ClipboardList,
+  Users,
+  BarChart3,
   Globe,
   Quote,
   HelpCircle,
@@ -63,14 +65,24 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       label: 'Inventory',
       icon: Boxes,
       badge: lowStockCount > 0 ? `${lowStockCount} alert` : undefined,
-      badgeColor: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+      badgeColor: 'bg-amber-100 text-amber-800 border border-amber-200',
     },
     {
       id: 'enquiries' as AdminTab,
       label: 'Customer Enquiries',
       icon: ClipboardList,
       badge: enquiriesCount > 0 ? String(enquiriesCount) : undefined,
-      badgeColor: 'bg-blue-500 text-white font-bold',
+      badgeColor: 'bg-[#F57C00] text-white font-bold',
+    },
+    {
+      id: 'customers' as AdminTab,
+      label: 'Customers',
+      icon: Users,
+    },
+    {
+      id: 'analytics' as AdminTab,
+      label: 'Analytics',
+      icon: BarChart3,
     },
     {
       id: 'website-content' as AdminTab,
@@ -104,22 +116,30 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     },
   ];
 
+  // Helper to determine if item is active
+  const isItemActive = (id: AdminTab) => {
+    if (currentTab === id) return true;
+    if (id === 'website-content' && currentTab === 'content') return true;
+    if (id === 'website-settings' && currentTab === 'settings') return true;
+    return false;
+  };
+
   return (
     <aside
-      className={`fixed top-0 left-0 bottom-0 z-40 bg-[#0a0e17] border-r border-slate-800 text-slate-300 transition-all duration-300 flex flex-col ${
+      className={`fixed top-0 left-0 bottom-0 z-40 bg-white border-r border-[#E2E8F0] text-[#64748B] transition-all duration-300 flex flex-col shadow-xs ${
         isCollapsed ? 'w-20' : 'w-64'
       }`}
     >
       {/* 1. Header & Brand */}
-      <div className="h-16 sm:h-20 border-b border-slate-800/80 px-4 flex items-center justify-between shrink-0">
+      <div className="h-16 sm:h-20 border-b border-[#E2E8F0] px-4 flex items-center justify-between shrink-0 bg-white">
         {!isCollapsed && (
           <div className="flex items-center gap-2 overflow-hidden">
-            <Logo variant="dark" className="h-7 w-auto" />
+            <Logo variant="light" className="h-7 w-auto" />
             <div className="leading-tight">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 block">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#F57C00] block">
                 Enterprise Admin
               </span>
-              <span className="text-xs font-bold text-white truncate block">
+              <span className="text-xs font-bold text-[#111827] truncate block">
                 KNR Management
               </span>
             </div>
@@ -128,7 +148,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
         {isCollapsed && (
           <div className="mx-auto">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white font-black text-sm flex items-center justify-center shadow-md">
+            <div className="w-9 h-9 rounded-xl bg-[#F57C00] text-white font-black text-xs flex items-center justify-center shadow-xs">
               KNR
             </div>
           </div>
@@ -137,7 +157,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         {/* Collapse toggle */}
         <button
           onClick={onToggleCollapse}
-          className={`p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800/80 transition-colors cursor-pointer ${
+          className={`p-1.5 text-slate-400 hover:text-[#111827] rounded-lg hover:bg-[#F8FAFC] transition-colors cursor-pointer ${
             isCollapsed ? 'hidden' : 'block'
           }`}
           title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -146,113 +166,97 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </button>
       </div>
 
-      {/* 2. Navigation items (12 items) */}
+      {/* 2. Navigation Items */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 custom-scrollbar">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = currentTab === item.id;
+          const active = isItemActive(item.id);
 
           return (
             <button
               key={item.id}
               onClick={() => onSelectTab(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer group relative ${
-                isActive
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left group ${
+                active
+                  ? 'bg-[#FFF3E0] text-[#F57C00] font-bold shadow-xs'
+                  : 'text-[#64748B] hover:text-[#111827] hover:bg-[#F8FAFC]'
               } ${isCollapsed ? 'justify-center px-0' : ''}`}
               title={isCollapsed ? item.label : undefined}
             >
               <Icon
-                className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 transition-colors ${
-                  isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'
+                className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
+                  active ? 'text-[#F57C00]' : 'text-slate-400 group-hover:text-[#111827]'
                 }`}
               />
 
               {!isCollapsed && (
-                <span className="truncate flex-1 text-left">{item.label}</span>
+                <span className="flex-1 truncate">{item.label}</span>
               )}
 
               {!isCollapsed && item.badge && (
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
-                    item.badgeColor || 'bg-slate-800 text-slate-300'
+                  className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${
+                    item.badgeColor || 'bg-slate-100 text-slate-700'
                   }`}
                 >
                   {item.badge}
                 </span>
               )}
 
-              {/* Tooltip for collapsed state */}
-              {isCollapsed && (
-                <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-900 border border-slate-700 text-white text-xs rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 whitespace-nowrap">
-                  {item.label}
-                  {item.badge && ` (${item.badge})`}
-                </div>
+              {isCollapsed && item.badge && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#F57C00]" />
               )}
             </button>
           );
         })}
-
-        {/* Public Website Link */}
-        <div className="pt-3 mt-3 border-t border-slate-800/80">
-          <a
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors ${
-              isCollapsed ? 'justify-center px-0' : ''
-            }`}
-            title="View Public Website"
-          >
-            <ExternalLink className="w-4 h-4 shrink-0 text-orange-400" />
-            {!isCollapsed && <span>View Live Website</span>}
-          </a>
-        </div>
       </nav>
 
-      {/* 3. Footer / User profile & Logout */}
-      <div className="p-3 border-t border-slate-800/80 shrink-0 bg-[#080c14]">
-        {!isCollapsed ? (
-          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/40 text-blue-400 font-bold text-xs flex items-center justify-center shrink-0">
-                {adminName ? adminName.slice(0, 2).toUpperCase() : 'AD'}
+      {/* 3. Bottom Links & Admin Session Summary */}
+      <div className="p-3 border-t border-[#E2E8F0] space-y-2 bg-[#F8FAFC] shrink-0">
+        {/* View public website link */}
+        <a
+          href="#home"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-[#64748B] hover:text-[#F57C00] hover:bg-white border border-transparent hover:border-[#E2E8F0] transition-all cursor-pointer ${
+            isCollapsed ? 'justify-center px-0' : ''
+          }`}
+          title="Open live public website in new tab"
+        >
+          <ExternalLink className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span>View Public Site</span>}
+        </a>
+
+        {/* User Card & Logout */}
+        <div
+          className={`flex items-center gap-2.5 p-2 bg-white rounded-xl border border-[#E2E8F0] ${
+            isCollapsed ? 'justify-center p-1.5' : ''
+          }`}
+        >
+          <div className="w-8 h-8 rounded-lg bg-[#FFF3E0] text-[#F57C00] font-black text-xs flex items-center justify-center shrink-0">
+            {adminName.charAt(0).toUpperCase()}
+          </div>
+
+          {!isCollapsed && (
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-bold text-[#111827] truncate">
+                {adminName}
               </div>
-              <div className="min-w-0 leading-tight">
-                <p className="text-xs font-bold text-white truncate">{adminName}</p>
-                <p className="text-[10px] text-slate-400 truncate capitalize">{adminRole}</p>
+              <div className="text-[10px] text-[#64748B] capitalize truncate">
+                {adminRole}
               </div>
             </div>
+          )}
 
-            <button
-              onClick={onLogout}
-              className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2">
-            <button
-              onClick={onToggleCollapse}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-              title="Expand sidebar"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onLogout}
-              className="p-2 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+          <button
+            onClick={onLogout}
+            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+            title="Logout of admin panel"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </aside>
   );
 };
-

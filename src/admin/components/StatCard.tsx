@@ -6,7 +6,7 @@ interface StatCardProps {
   value: string | number;
   subtitle?: string;
   icon: LucideIcon;
-  color?: 'blue' | 'emerald' | 'amber' | 'rose' | 'purple' | 'slate';
+  color?: 'orange' | 'blue' | 'emerald' | 'amber' | 'rose' | 'purple' | 'slate';
   trend?: {
     value: string;
     isPositive?: boolean;
@@ -15,6 +15,12 @@ interface StatCardProps {
 }
 
 const colorMap = {
+  orange: {
+    bg: 'bg-orange-50',
+    border: 'border-orange-200',
+    text: 'text-[#F57C00]',
+    iconBg: 'bg-[#F57C00]',
+  },
   blue: {
     bg: 'bg-blue-50',
     border: 'border-blue-200',

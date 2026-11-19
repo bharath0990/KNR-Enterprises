@@ -14,6 +14,7 @@ import { ContactScreen } from './components/Screens/ContactScreen';
 import { AdminApp } from './admin/AdminApp';
 import { AuthProvider } from './context/AuthContext';
 import { WebsiteSettingsProvider, useWebsiteSettings } from './context/WebsiteSettingsContext';
+import { RealtimeProvider } from './context/RealtimeContext';
 import {
   MessageCircle,
   ArrowUp,
@@ -446,7 +447,9 @@ export default function App() {
   return (
     <AuthProvider>
       <WebsiteSettingsProvider>
-        <AppContent />
+        <RealtimeProvider>
+          <AppContent />
+        </RealtimeProvider>
       </WebsiteSettingsProvider>
     </AuthProvider>
   );

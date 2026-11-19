@@ -9,6 +9,8 @@ import { ProductFormPage } from './pages/ProductFormPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { EnquiriesPage } from './pages/EnquiriesPage';
+import { CustomersPage } from './pages/CustomersPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 import { WebsiteContentPage } from './pages/WebsiteContentPage';
 import { TestimonialsPage } from './pages/TestimonialsPage';
 import { FaqsPage } from './pages/FaqsPage';
@@ -35,13 +37,19 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
       'categories',
       'inventory',
       'enquiries',
+      'customers',
+      'analytics',
       'website-content',
+      'content',
       'testimonials',
       'faqs',
       'services',
       'website-settings',
+      'settings',
       'admin-profile',
     ];
+    if (clean === 'content') return 'website-content';
+    if (clean === 'settings') return 'website-settings';
     if (validTabs.includes(clean as AdminTab)) return clean as AdminTab;
     return 'dashboard';
   });
@@ -52,7 +60,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
     product: Product | null;
   }>({ isOpen: false, product: null });
 
-  // Selected enquiry for direct viewing from dashboard
+  // Selected enquiry for direct viewing from dashboard or notifications
   const [selectedEnquiry, setSelectedEnquiry] = useState<CustomerEnquiry | null>(null);
 
   // Badge notification counts
@@ -61,11 +69,35 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
 
   // Sync hash with currentTab
   const handleSelectTab = (tab: AdminTab) => {
-    setCurrentTab(tab);
+    let target = tab;
+    if (tab === 'content') target = 'website-content';
+    if (tab === 'settings') target = 'website-settings';
+
+    setCurrentTab(target);
     setProductFormMode({ isOpen: false, product: null });
     setSelectedEnquiry(null);
-    window.location.hash = `admin/${tab}`;
+    window.location.hash = `admin/${target}`;
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handle clicking on a notification from the header
+  const handleOpenNotificationReference = async (referenceId: string, referenceTab?: AdminTab) => {
+    if (referenceTab === 'enquiries' || !referenceTab) {
+      try {
+        const list = await fetchEnquiries();
+        const found = list.find((e) => e.id === referenceId);
+        if (found) {
+          setSelectedEnquiry(found);
+          handleSelectTab('enquiries');
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to fetch enquiry by notification reference:', err);
+      }
+      handleSelectTab('enquiries');
+    } else {
+      handleSelectTab(referenceTab);
+    }
   };
 
   // Load badge counts
@@ -102,21 +134,20 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
     };
   }, [isAuthenticated]);
 
-  // Loading spinner during initial auth check
+  // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#070b12] flex items-center justify-center text-white">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-semibold text-slate-400">
-            Verifying Administrator Credentials...
-          </p>
-        </div>
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center text-slate-700">
+        <div className="w-12 h-12 border-4 border-orange-500/20 border-t-[#F57C00] rounded-full animate-spin mb-4" />
+        <h2 className="text-sm font-bold text-[#111827]">
+          Verifying Administrator Session...
+        </h2>
+        <p className="text-xs text-[#64748B] mt-1">Connecting to Supabase PostgreSQL</p>
       </div>
     );
   }
 
-  // Not authenticated: Show Login Screen
+  // Not authenticated: Show Login Page
   if (!isAuthenticated) {
     return (
       <AdminLoginPage
@@ -140,6 +171,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
       }}
       enquiriesCount={enquiriesCount}
       lowStockCount={lowStockCount}
+      onOpenNotificationReference={handleOpenNotificationReference}
     >
       {/* 1. Dashboard Overview */}
       {currentTab === 'dashboard' && (
@@ -195,24 +227,40 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
         <EnquiriesPage initialSelectedEnquiry={selectedEnquiry} />
       )}
 
-      {/* 6. Website Content */}
-      {currentTab === 'website-content' && <WebsiteContentPage />}
+      {/* 6. Customers Directory */}
+      {currentTab === 'customers' && (
+        <CustomersPage
+          onViewEnquiry={(enq) => {
+            setSelectedEnquiry(enq);
+            setCurrentTab('enquiries');
+          }}
+        />
+      )}
 
-      {/* 7. Testimonials */}
+      {/* 7. Procurement Analytics */}
+      {currentTab === 'analytics' && <AnalyticsPage />}
+
+      {/* 8. Website Content */}
+      {(currentTab === 'website-content' || currentTab === 'content') && (
+        <WebsiteContentPage />
+      )}
+
+      {/* 9. Testimonials */}
       {currentTab === 'testimonials' && <TestimonialsPage />}
 
-      {/* 8. FAQs */}
+      {/* 10. FAQs */}
       {currentTab === 'faqs' && <FaqsPage />}
 
-      {/* 9. Services */}
+      {/* 11. Services */}
       {currentTab === 'services' && <ServicesPage />}
 
-      {/* 10. Website Settings */}
-      {currentTab === 'website-settings' && <WebsiteSettingsPage />}
+      {/* 12. Website Settings */}
+      {(currentTab === 'website-settings' || currentTab === 'settings') && (
+        <WebsiteSettingsPage />
+      )}
 
-      {/* 11. Admin Profile */}
+      {/* 13. Admin Profile */}
       {currentTab === 'admin-profile' && <AdminProfilePage user={user} />}
     </AdminLayout>
   );
 };
-

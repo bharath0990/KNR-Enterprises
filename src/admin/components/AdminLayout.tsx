@@ -11,6 +11,7 @@ interface AdminLayoutProps {
   children: ReactNode;
   enquiriesCount?: number;
   lowStockCount?: number;
+  onOpenNotificationReference?: (referenceId: string, referenceTab?: AdminTab) => void;
 }
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({
@@ -21,12 +22,13 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   children,
   enquiriesCount = 0,
   lowStockCount = 0,
+  onOpenNotificationReference,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#f8f9fc] text-slate-900 font-sans flex">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans flex">
       {/* 1. Desktop & Tablet Sidebar */}
       <div className="hidden md:block">
         <AdminSidebar
@@ -48,10 +50,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           {/* Backdrop */}
           <div
             onClick={() => setMobileSidebarOpen(false)}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
           />
 
-          <div className="relative w-64 max-w-xs bg-[#0a0e17] flex flex-col z-10">
+          <div className="relative w-64 max-w-xs bg-white border-r border-[#E2E8F0] flex flex-col z-10 shadow-2xl">
             <AdminSidebar
               currentTab={currentTab}
               onSelectTab={(tab) => {
@@ -85,6 +87,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           onLogout={onLogout}
           onSelectTab={onSelectTab}
           pendingEnquiriesCount={enquiriesCount}
+          onOpenNotificationReference={onOpenNotificationReference}
         />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
