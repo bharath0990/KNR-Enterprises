@@ -303,7 +303,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-slate-400">
                     <Package className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                    No products matched your criteria.
+                    No records available yet.
                   </td>
                 </tr>
               ) : (

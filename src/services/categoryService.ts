@@ -59,7 +59,8 @@ export async function fetchCategories(): Promise<Category[]> {
         .select('*')
         .order('display_order', { ascending: true });
 
-      if (!error && data && data.length > 0) {
+      if (error) throw error;
+      if (data) {
         // Also fetch product counts for each category
         const { data: prodData } = await supabase
           .from('products')
@@ -73,11 +74,18 @@ export async function fetchCategories(): Promise<Category[]> {
           });
         }
 
-        return data.map((row) => {
+        const mapped = data.map((row) => {
           const cat = mapDbCategory(row);
           cat.count = counts[cat.name] || counts[cat.id] || 0;
           return cat;
         });
+
+        try {
+          localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(mapped));
+        } catch {
+          // ignore
+        }
+        return mapped;
       }
     } catch (err) {
       console.warn('Falling back to local categories:', err);

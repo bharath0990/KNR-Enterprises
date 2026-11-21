@@ -51,6 +51,7 @@ import {
 } from '../../services/quotationService';
 import { downloadQuotationPdf } from '../../services/pdfService';
 import { formatINR } from '../../services/productService';
+import { formatISTDateTime, formatISTDate, formatRelativeTime } from '../../utils/date';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { QuotationBuilderModal } from '../components/QuotationBuilderModal';
 
@@ -347,7 +348,7 @@ export const EnquiriesPage: React.FC<EnquiriesPageProps> = ({ initialSelectedEnq
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400">
                     <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                    No enquiries found matching your query.
+                    No records available yet.
                   </td>
                 </tr>
               ) : (
@@ -392,11 +393,9 @@ export const EnquiriesPage: React.FC<EnquiriesPageProps> = ({ initialSelectedEnq
 
                       {/* Date */}
                       <td className="py-3 px-3 font-mono text-[11px] text-[#64748B] whitespace-nowrap">
-                        {new Date(enq.createdAt).toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
+                        <span title={formatISTDateTime(enq.createdAt)}>
+                          {formatISTDate(enq.createdAt)}
+                        </span>
                       </td>
 
                       {/* Value */}
@@ -519,7 +518,7 @@ export const EnquiriesPage: React.FC<EnquiriesPageProps> = ({ initialSelectedEnq
                     </span>
                   </div>
                   <p className="text-xs text-slate-300">
-                    Logged on {new Date(selectedEnquiry.createdAt).toLocaleString('en-IN')} &bull; Source: {selectedEnquiry.source}
+                    Logged on {formatISTDateTime(selectedEnquiry.createdAt)} &bull; Source: {selectedEnquiry.source}
                   </p>
                 </div>
               </div>
@@ -592,7 +591,7 @@ export const EnquiriesPage: React.FC<EnquiriesPageProps> = ({ initialSelectedEnq
                   </div>
                   {selectedEnquiry.expectedDeliveryDate && (
                     <div className="text-slate-600 font-semibold pt-1">
-                      Expected Delivery: {new Date(selectedEnquiry.expectedDeliveryDate).toLocaleDateString('en-IN')}
+                      Expected Delivery: {formatISTDate(selectedEnquiry.expectedDeliveryDate)}
                     </div>
                   )}
                 </div>
@@ -904,7 +903,7 @@ export const EnquiriesPage: React.FC<EnquiriesPageProps> = ({ initialSelectedEnq
                           </div>
                           {h.notes && <div className="text-slate-600">{h.notes}</div>}
                           <div className="text-[10px] text-slate-400">
-                            {new Date(h.createdAt).toLocaleString('en-IN')}
+                            {formatISTDateTime(h.createdAt)}
                           </div>
                         </div>
                       ))}
@@ -926,7 +925,7 @@ export const EnquiriesPage: React.FC<EnquiriesPageProps> = ({ initialSelectedEnq
                           {c.subject && <div className="font-semibold">{c.subject}</div>}
                           <div className="text-slate-600 line-clamp-2">{c.messagePreview}</div>
                           <div className="text-[10px] text-slate-400">
-                            {new Date(c.createdAt).toLocaleString('en-IN')}
+                            {formatISTDateTime(c.createdAt)}
                           </div>
                         </div>
                       ))}

@@ -9,58 +9,13 @@ function getInitialLocalLogs(): InventoryLog[] {
     const saved = localStorage.getItem(LOGS_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch {
     // fallback
   }
 
-  const seeded: InventoryLog[] = [
-    {
-      id: 'log-1',
-      productId: 'bleaching-powder-grade1',
-      productName: 'Commercial Bleaching Powder Grade 1',
-      previousStock: 0,
-      newStock: 250,
-      changeAmount: 250,
-      changeType: 'initial_stock',
-      notes: 'Initial depot warehouse consignment intake',
-      createdBy: 'K. Narendar Reddy',
-      createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-    },
-    {
-      id: 'log-2',
-      productId: 'hdpe-wheeled-garbage-bin-240l',
-      productName: 'Heavy-Duty HDPE Wheeled Garbage Bin (240L SBM)',
-      previousStock: 0,
-      newStock: 120,
-      changeAmount: 120,
-      changeType: 'initial_stock',
-      notes: 'Swachh Bharat factory batch intake',
-      createdBy: 'G. Siva',
-      createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    },
-    {
-      id: 'log-3',
-      productId: 'heavy-thermal-fogging-machine',
-      productName: 'Heavy Pulse-Jet Thermal Fogging Machine (Delta Fog)',
-      previousStock: 20,
-      newStock: 25,
-      changeAmount: 5,
-      changeType: 'shipment_received',
-      notes: 'Received 5 additional SS304 units for monsoon vector hot-spots',
-      createdBy: 'K. Narendar Reddy',
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-  ];
-
-  try {
-    localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(seeded));
-  } catch {
-    // ignore
-  }
-
-  return seeded;
+  return [];
 }
 
 export async function fetchInventoryLogs(productId?: string): Promise<InventoryLog[]> {
@@ -76,8 +31,17 @@ export async function fetchInventoryLogs(productId?: string): Promise<InventoryL
       }
 
       const { data, error } = await query;
-      if (!error && data && data.length > 0) {
-        return data.map((row) => ({
+      if (error) throw error;
+      if (data) {
+        if (data.length === 0) {
+          try {
+            localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify([]));
+          } catch {
+            // ignore
+          }
+          return [];
+        }
+        const mapped: InventoryLog[] = data.map((row) => ({
           id: String(row.id),
           productId: String(row.product_id),
           productName: row.products && typeof row.products === 'object' && 'name' in row.products
@@ -88,9 +52,15 @@ export async function fetchInventoryLogs(productId?: string): Promise<InventoryL
           changeAmount: Number(row.change_amount || 0),
           changeType: row.change_type,
           notes: String(row.notes || ''),
-          createdBy: String(row.created_by || 'Admin'),
-          createdAt: String(row.created_at || new Date().toISOString()),
+          createdBy: String(row.created_by || ''),
+          createdAt: String(row.created_at || ''),
         }));
+        try {
+          localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(mapped));
+        } catch {
+          // ignore
+        }
+        return mapped;
       }
     } catch (err) {
       console.warn('Could not query inventory logs from Supabase:', err);

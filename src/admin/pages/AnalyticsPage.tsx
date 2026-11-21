@@ -65,9 +65,13 @@ export const AnalyticsPage: React.FC = () => {
     const counts: Record<string, number> = {
       New: 0,
       Contacted: 0,
+      'Quotation Preparing': 0,
       'Quotation Sent': 0,
-      Approved: 0,
+      Negotiation: 0,
+      'Order Confirmed': 0,
       Completed: 0,
+      Approved: 0,
+      Lost: 0,
       Rejected: 0,
     };
     enquiries.forEach((e) => {
@@ -80,11 +84,12 @@ export const AnalyticsPage: React.FC = () => {
     return counts;
   }, [enquiries]);
 
-  // 3. District Distribution
+  // 3. District Distribution (Derived strictly from genuine enquiry data)
   const districtDistribution = useMemo(() => {
+    if (enquiries.length === 0) return [];
     const counts: Record<string, number> = {};
     enquiries.forEach((e) => {
-      const dist = e.district?.trim() || 'Ranga Reddy District';
+      const dist = e.district?.trim() || e.state?.trim() || 'Unspecified';
       counts[dist] = (counts[dist] || 0) + 1;
     });
 
@@ -204,32 +209,40 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            {[
-              { label: 'New / Unreviewed', count: statusCounts.New, color: 'bg-blue-500' },
-              { label: 'Contacted Client', count: statusCounts.Contacted, color: 'bg-amber-500' },
-              { label: 'GST Proforma Quoted', count: statusCounts['Quotation Sent'], color: 'bg-indigo-500' },
-              { label: 'Approved by Panchayat / EPC', count: statusCounts.Approved, color: 'bg-emerald-500' },
-              { label: 'Dispatched & Completed', count: statusCounts.Completed, color: 'bg-teal-600' },
-              { label: 'Declined / Withdrawn', count: statusCounts.Rejected, color: 'bg-slate-400' },
-            ].map((stage) => {
-              const pct = totalEnquiries > 0 ? Math.round((stage.count / totalEnquiries) * 100) : 0;
-              return (
-                <div key={stage.label} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="font-semibold text-[#111827]">{stage.label}</span>
-                    <span className="font-mono text-slate-500">
-                      {stage.count} ({pct}%)
-                    </span>
+            {totalEnquiries === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                No records available yet.
+              </div>
+            ) : (
+              [
+                { label: 'New / Unreviewed', count: statusCounts.New, color: 'bg-blue-500' },
+                { label: 'Contacted Client', count: statusCounts.Contacted, color: 'bg-amber-500' },
+                { label: 'Quotation Preparing', count: statusCounts['Quotation Preparing'], color: 'bg-indigo-500' },
+                { label: 'GST Proforma Quoted', count: statusCounts['Quotation Sent'], color: 'bg-purple-500' },
+                { label: 'Under Negotiation', count: statusCounts.Negotiation, color: 'bg-orange-500' },
+                { label: 'Order Confirmed', count: statusCounts['Order Confirmed'], color: 'bg-emerald-500' },
+                { label: 'Dispatched & Completed', count: statusCounts.Completed + statusCounts.Approved, color: 'bg-teal-600' },
+                { label: 'Lost / Rejected', count: statusCounts.Lost + statusCounts.Rejected, color: 'bg-slate-400' },
+              ].map((stage) => {
+                const pct = totalEnquiries > 0 ? Math.round((stage.count / totalEnquiries) * 100) : 0;
+                return (
+                  <div key={stage.label} className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="font-semibold text-[#111827]">{stage.label}</span>
+                      <span className="font-mono text-slate-500">
+                        {stage.count} ({pct}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className={`h-full ${stage.color} rounded-full transition-all duration-500`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      className={`h-full ${stage.color} rounded-full transition-all duration-500`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -245,7 +258,7 @@ export const AnalyticsPage: React.FC = () => {
           <div className="space-y-3">
             {districtDistribution.length === 0 ? (
               <div className="py-8 text-center text-slate-400 text-xs">
-                No district records logged yet.
+                No records available yet.
               </div>
             ) : (
               districtDistribution.slice(0, 5).map((dist) => (

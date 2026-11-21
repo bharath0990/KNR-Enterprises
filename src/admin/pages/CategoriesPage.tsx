@@ -178,7 +178,15 @@ export const CategoriesPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
-              {categories.map((cat) => (
+              {categories.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
+                    <Layers className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    No records available yet.
+                  </td>
+                </tr>
+              ) : (
+                categories.map((cat) => (
                 <tr key={cat.id} className="hover:bg-slate-50/70 transition-colors">
                   {/* Order */}
                   <td className="py-3 px-4 font-mono font-bold text-slate-400">
@@ -263,7 +271,7 @@ export const CategoriesPage: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

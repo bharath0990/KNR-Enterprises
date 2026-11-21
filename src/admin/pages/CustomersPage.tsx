@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CustomerEnquiry } from '../../types';
 import { fetchEnquiries } from '../../services/enquiryService';
+import { formatISTDate, formatRelativeTime } from '../../utils/date';
 import {
   Users,
   Search,
@@ -249,7 +250,7 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onViewEnquiry }) =
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400">
                     <Users className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                    <p className="font-bold text-slate-700">No customers found</p>
+                    <p className="font-bold text-slate-700">No records available yet.</p>
                     <p className="text-[11px] text-slate-400 mt-0.5">
                       Customer records are generated automatically when RFQ enquiries are received.
                     </p>
@@ -308,9 +309,9 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onViewEnquiry }) =
                       </td>
 
                       <td className="py-3.5 px-4 text-[#64748B] whitespace-nowrap">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1" title={formatISTDate(customer.lastEnquiryDate)}>
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{new Date(customer.lastEnquiryDate).toLocaleDateString('en-IN')}</span>
+                          <span>{formatRelativeTime(customer.lastEnquiryDate)}</span>
                         </div>
                       </td>
 

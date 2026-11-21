@@ -91,3 +91,4 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.rfq_notification_settings;
   END IF;
 END $$;
+

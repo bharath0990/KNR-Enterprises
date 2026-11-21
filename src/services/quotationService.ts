@@ -97,9 +97,25 @@ export async function fetchQuotations(enquiryId?: string): Promise<Quotation[]> 
       const { data, error } = await query;
       if (error) throw error;
 
-      if (data && data.length > 0) {
+      if (data) {
+        if (data.length === 0) {
+          if (!enquiryId) {
+            try {
+              localStorage.setItem(QUOTATIONS_STORAGE_KEY, JSON.stringify([]));
+            } catch {
+              // ignore
+            }
+          }
+          return [];
+        }
         const formatted: Quotation[] = data.map(mapDbToQuotation);
-        localStorage.setItem(QUOTATIONS_STORAGE_KEY, JSON.stringify(formatted));
+        if (!enquiryId) {
+          try {
+            localStorage.setItem(QUOTATIONS_STORAGE_KEY, JSON.stringify(formatted));
+          } catch {
+            // ignore
+          }
+        }
         return formatted;
       }
     } catch (err) {
@@ -109,9 +125,15 @@ export async function fetchQuotations(enquiryId?: string): Promise<Quotation[]> 
 
   const cached = localStorage.getItem(QUOTATIONS_STORAGE_KEY);
   if (cached) {
-    const parsed: Quotation[] = JSON.parse(cached);
-    if (enquiryId) return parsed.filter((q) => q.enquiryId === enquiryId);
-    return parsed;
+    try {
+      const parsed: Quotation[] = JSON.parse(cached);
+      if (Array.isArray(parsed)) {
+        if (enquiryId) return parsed.filter((q) => q.enquiryId === enquiryId);
+        return parsed;
+      }
+    } catch {
+      // ignore
+    }
   }
   return [];
 }

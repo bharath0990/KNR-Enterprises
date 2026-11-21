@@ -43,137 +43,13 @@ function getInitialLocalEnquiries(): CustomerEnquiry[] {
     const saved = localStorage.getItem(ENQUIRIES_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch {
     // fallback
   }
 
-  // Sample real-world historical procurement records for immediate demonstration
-  const seeded: CustomerEnquiry[] = [
-    {
-      id: 'enq-001',
-      enquiryNumber: 'KNR-RFQ-2026-1042',
-      customerName: 'M. Ramachandra Rao',
-      mobileNumber: '+91 9440123890',
-      email: 'sarpanch.chevella@telangana.gov.in',
-      organisation: 'Chevella Gram Panchayat',
-      designation: 'Sarpanch',
-      mandal: 'Chevella',
-      district: 'Ranga Reddy',
-      state: 'Telangana',
-      status: 'Quotation Sent',
-      notes: 'Need monsoon drain sanitation stock before end of week for 6 habitations.',
-      internalNotes: 'Quotation emailed with 18% GST proforma estimate. Delivery arranged via pickup.',
-      subtotal: 15650,
-      estimatedGst: 2817,
-      totalAmount: 18467,
-      source: 'proforma_generator',
-      items: [
-        {
-          productName: 'Commercial Bleaching Powder Grade 1 (33% Chlorine)',
-          quantity: 10,
-          unit: 'bag',
-          unitPrice: 850,
-          hsnCode: '2828.10.10',
-          totalPrice: 8500,
-        },
-        {
-          productName: 'Heavy-Duty HDPE Wheeled Garbage Bin (240L SBM)',
-          quantity: 2,
-          unit: 'unit',
-          unitPrice: 2850,
-          hsnCode: '3923.10.90',
-          totalPrice: 5700,
-        },
-        {
-          productName: 'Malathion 5% DP Vector Insecticide (Dusting Powder)',
-          quantity: 1,
-          unit: 'bag',
-          unitPrice: 1450,
-          hsnCode: '3808.91.99',
-          totalPrice: 1450,
-        },
-      ],
-      createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-    },
-    {
-      id: 'enq-002',
-      enquiryNumber: 'KNR-RFQ-2026-1041',
-      customerName: 'Dr. K. Srinivasulu',
-      mobileNumber: '+91 9848011223',
-      email: 'sanitary.vikarabad@telangana.gov.in',
-      organisation: 'Vikarabad Municipality',
-      designation: 'Sanitary Inspector',
-      mandal: 'Vikarabad Urban',
-      district: 'Vikarabad',
-      state: 'Telangana',
-      status: 'New',
-      notes: 'Emergency dengue containment drive. Require thermal fogger & 10L larvicide urgently.',
-      internalNotes: 'Received via website tender basket. Need to call Siva for immediate truck loading.',
-      subtotal: 30200,
-      estimatedGst: 5436,
-      totalAmount: 35636,
-      source: 'cart_whatsapp',
-      items: [
-        {
-          productName: 'Heavy Pulse-Jet Thermal Fogging Machine (Delta Fog)',
-          quantity: 1,
-          unit: 'unit',
-          unitPrice: 26500,
-          hsnCode: '8424.89.90',
-          totalPrice: 26500,
-        },
-        {
-          productName: 'Mosquito Larvicide Granules & Liquid (Temephos 50% EC)',
-          quantity: 2,
-          unit: 'can',
-          unitPrice: 1850,
-          hsnCode: '3808.91.99',
-          totalPrice: 3700,
-        },
-      ],
-      createdAt: new Date(Date.now() - 3600000 * 18).toISOString(),
-    },
-    {
-      id: 'enq-003',
-      enquiryNumber: 'KNR-RFQ-2026-1039',
-      customerName: 'N. Sudhakar Reddy',
-      mobileNumber: '+91 9989045671',
-      email: 'procurement@srisaiinfra.co.in',
-      organisation: 'Sri Sai Civil Infra & EPC Works',
-      designation: 'Project Director',
-      mandal: 'Shankarpally',
-      district: 'Ranga Reddy',
-      state: 'Telangana',
-      status: 'Completed',
-      notes: 'Civic smart LED streetlight illumination tender execution.',
-      internalNotes: 'Dispatched and paid via RTGS token. Delivered with invoice and warranty certificates.',
-      subtotal: 29400,
-      estimatedGst: 5292,
-      totalAmount: 34692,
-      source: 'website_rfq',
-      items: [
-        {
-          productName: 'Civic Smart LED Street Light (60W / 120W IP66)',
-          quantity: 12,
-          unit: 'fixture',
-          unitPrice: 2450,
-          hsnCode: '9405.40.90',
-          totalPrice: 29400,
-        },
-      ],
-      createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    },
-  ];
-
-  try {
-    localStorage.setItem(ENQUIRIES_STORAGE_KEY, JSON.stringify(seeded));
-  } catch {
-    // ignore
-  }
-
-  return seeded;
+  return [];
 }
 
 export async function fetchEnquiries(): Promise<CustomerEnquiry[]> {
@@ -184,7 +60,18 @@ export async function fetchEnquiries(): Promise<CustomerEnquiry[]> {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (!enqError && enqData && enqData.length > 0) {
+      if (enqError) throw enqError;
+
+      if (enqData) {
+        if (enqData.length === 0) {
+          try {
+            localStorage.setItem(ENQUIRIES_STORAGE_KEY, JSON.stringify([]));
+          } catch {
+            // ignore
+          }
+          return [];
+        }
+
         // Fetch items
         const { data: itemsData } = await supabase.from('enquiry_items').select('*');
         const itemsByEnquiry: Record<string, EnquiryItem[]> = {};

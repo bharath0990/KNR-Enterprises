@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { fetchProducts } from '../../services/productService';
 import { fetchInventoryLogs, adjustStock } from '../../services/inventoryService';
+import { formatISTDateTime } from '../../utils/date';
 
 export const InventoryPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -274,7 +275,15 @@ export const InventoryPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
-                  {filteredProducts.map((p) => {
+                  {filteredProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-slate-400">
+                        <Boxes className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        No records available yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredProducts.map((p) => {
                     const stock = p.stockQuantity ?? 0;
                     const threshold = p.lowStockThreshold ?? 10;
                     const isOut = !p.inStock || stock <= 0;
@@ -377,7 +386,7 @@ export const InventoryPage: React.FC = () => {
                         </td>
                       </tr>
                     );
-                  })}
+                  }))}
                 </tbody>
               </table>
             </div>
@@ -417,20 +426,14 @@ export const InventoryPage: React.FC = () => {
                 {logs.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-slate-400">
-                      No stock changes recorded yet.
+                      No records available yet.
                     </td>
                   </tr>
                 ) : (
                   logs.map((log) => (
                     <tr key={log.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3 px-4 font-mono text-[11px] text-slate-500 whitespace-nowrap">
-                        {new Date(log.createdAt).toLocaleString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        {formatISTDateTime(log.createdAt)}
                       </td>
 
                       <td className="py-3 px-4 font-bold text-slate-900">

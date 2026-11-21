@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AdminTab, Product, CustomerEnquiry, Category } from '../../types';
+import { AdminTab, Product, CustomerEnquiry, Category, ConfirmedOrder, Quotation } from '../../types';
 import {
   Package,
   CheckCircle,
@@ -11,15 +11,20 @@ import {
   Plus,
   TrendingUp,
   AlertTriangle,
-  Phone,
-  MessageCircle,
   Eye,
   RefreshCw,
+  Users,
+  Send,
+  FileCheck2,
+  XCircle,
+  EyeOff,
 } from 'lucide-react';
 import { StatCard } from '../components/StatCard';
 import { fetchProducts, formatINR } from '../../services/productService';
 import { fetchCategories } from '../../services/categoryService';
 import { fetchEnquiries } from '../../services/enquiryService';
+import { fetchConfirmedOrders, fetchQuotations } from '../../services/quotationService';
+import { formatISTDateTime, formatRelativeTime } from '../../utils/date';
 
 interface DashboardOverviewPageProps {
   onNavigateTab: (tab: AdminTab) => void;
@@ -37,19 +42,25 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [enquiries, setEnquiries] = useState<CustomerEnquiry[]>([]);
+  const [confirmedOrders, setConfirmedOrders] = useState<ConfirmedOrder[]>([]);
+  const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [prodRes, catRes, enqRes] = await Promise.all([
+      const [prodRes, catRes, enqRes, ordersRes, quotRes] = await Promise.all([
         fetchProducts(),
         fetchCategories(),
         fetchEnquiries(),
+        fetchConfirmedOrders(),
+        fetchQuotations(),
       ]);
       setProducts(prodRes);
       setCategories(catRes);
       setEnquiries(enqRes);
+      setConfirmedOrders(ordersRes);
+      setQuotations(quotRes);
     } catch (err) {
       console.error('Error loading dashboard statistics:', err);
     } finally {
@@ -64,18 +75,58 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
     window.addEventListener('knr_products_updated', handleUpdate);
     window.addEventListener('knr_enquiries_updated', handleUpdate);
     window.addEventListener('knr_categories_updated', handleUpdate);
+    window.addEventListener('knr_orders_updated', handleUpdate);
+    window.addEventListener('knr_quotations_updated', handleUpdate);
 
     return () => {
       window.removeEventListener('knr_products_updated', handleUpdate);
       window.removeEventListener('knr_enquiries_updated', handleUpdate);
       window.removeEventListener('knr_categories_updated', handleUpdate);
+      window.removeEventListener('knr_orders_updated', handleUpdate);
+      window.removeEventListener('knr_quotations_updated', handleUpdate);
     };
   }, []);
 
-  // Compute actual real statistics
+  // 1. Catalog & Product Statistics (Computed from real products)
   const totalProducts = products.length;
   const activeProducts = products.filter((p) => p.isActive !== false).length;
-  const outOfStockProducts = products.filter((p) => !p.inStock || (p.stockQuantity !== undefined && p.stockQuantity <= 0)).length;
+  const inactiveProducts = products.filter((p) => p.isActive === false).length;
+  const outOfStockProducts = products.filter(
+    (p) => !p.inStock || (p.stockQuantity !== undefined && p.stockQuantity <= 0)
+  ).length;
+  const totalCategories = categories.length;
+
+  // 2. Unique Customers (Computed from genuine customer enquiries and confirmed orders)
+  const totalCustomers = useMemo(() => {
+    const customerKeys = new Set<string>();
+    enquiries.forEach((e) => {
+      const raw = (e.mobileNumber || '').replace(/[^0-9]/g, '');
+      const key = raw.length >= 10 ? raw.slice(-10) : e.customerName.toLowerCase().trim();
+      if (key) customerKeys.add(key);
+    });
+    confirmedOrders.forEach((o) => {
+      const raw = (o.mobileNumber || '').replace(/[^0-9]/g, '');
+      const key = raw.length >= 10 ? raw.slice(-10) : o.customerName.toLowerCase().trim();
+      if (key) customerKeys.add(key);
+    });
+    return customerKeys.size;
+  }, [enquiries, confirmedOrders]);
+
+  // 3. RFQ & Order Pipeline Statistics (Computed from real enquiries and orders)
+  const totalEnquiries = enquiries.length;
+  const newEnquiries = enquiries.filter((e) => e.status === 'New').length;
+  const pendingQuotations = enquiries.filter(
+    (e) => e.status === 'Quotation Preparing' || e.status === 'Contacted'
+  ).length;
+  const quotationsSent = enquiries.filter((e) => e.status === 'Quotation Sent').length;
+  const confirmedOrdersCount =
+    confirmedOrders.length > 0
+      ? confirmedOrders.length
+      : enquiries.filter((e) => e.status === 'Order Confirmed' || e.status === 'Completed').length;
+  const lostEnquiries = enquiries.filter(
+    (e) => e.status === 'Lost' || e.status === 'Rejected'
+  ).length;
+
   const lowStockProductsList = useMemo(() => {
     return products.filter((p) => {
       const threshold = p.lowStockThreshold ?? 10;
@@ -83,10 +134,6 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
       return stock <= threshold;
     });
   }, [products]);
-
-  const totalCategories = categories.length;
-  const totalEnquiries = enquiries.length;
-  const pendingEnquiries = enquiries.filter((e) => e.status === 'New' || e.status === 'Contacted').length;
 
   // Recently added products (top 5)
   const recentProducts = useMemo(() => {
@@ -98,17 +145,19 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
     return [...enquiries].slice(0, 5);
   }, [enquiries]);
 
-  // Monthly Enquiry Analytics (Derived from actual enquiries data)
+  // Monthly Enquiry Analytics (Derived strictly from genuine DB enquiries)
   const monthlyAnalytics = useMemo(() => {
+    if (enquiries.length === 0) return [];
     const monthsMap: Record<string, { count: number; totalValue: number }> = {};
     enquiries.forEach((enq) => {
       const date = new Date(enq.createdAt);
-      const key = date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+      if (isNaN(date.getTime())) return;
+      const key = date.toLocaleString('en-IN', { month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
       if (!monthsMap[key]) {
         monthsMap[key] = { count: 0, totalValue: 0 };
       }
       monthsMap[key].count += 1;
-      monthsMap[key].totalValue += enq.totalAmount;
+      monthsMap[key].totalValue += enq.totalAmount || 0;
     });
     return Object.entries(monthsMap).slice(-6);
   }, [enquiries]);
@@ -146,70 +195,121 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
         </div>
       </div>
 
-      {/* 2. Primary 6 Database Statistics Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
-        {/* Total Products */}
-        <StatCard
-          title="Total Products"
-          value={totalProducts}
-          subtitle="In Catalog"
-          icon={Package}
-          color="orange"
-          onClick={() => onNavigateTab('products')}
-        />
-
-        {/* Active Products */}
-        <StatCard
-          title="Active Products"
-          value={activeProducts}
-          subtitle="Public Catalog"
-          icon={CheckCircle}
-          color="emerald"
-          onClick={() => onNavigateTab('products')}
-        />
-
-        {/* Out of Stock Products */}
-        <StatCard
-          title="Out of Stock"
-          value={outOfStockProducts}
-          subtitle="Zero Inventory"
-          icon={AlertOctagon}
-          color="rose"
-          onClick={() => onNavigateTab('inventory')}
-        />
-
-        {/* Total Categories */}
-        <StatCard
-          title="Categories"
-          value={totalCategories}
-          subtitle="Product Slabs"
-          icon={Layers}
-          color="purple"
-          onClick={() => onNavigateTab('categories')}
-        />
-
-        {/* Total RFQ Enquiries */}
-        <StatCard
-          title="Total Enquiries"
-          value={totalEnquiries}
-          subtitle="All Time RFQ"
-          icon={ClipboardList}
-          color="slate"
-          onClick={() => onNavigateTab('enquiries')}
-        />
-
-        {/* Pending Enquiries */}
-        <StatCard
-          title="Pending RFQs"
-          value={pendingEnquiries}
-          subtitle="Needs Follow-up"
-          icon={Clock}
-          color="amber"
-          onClick={() => onNavigateTab('enquiries')}
-        />
+      {/* 2. Catalog & Product Inventory Statistics Cards (Row 1) */}
+      <div>
+        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">
+          Catalog & Inventory Statistics
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          <StatCard
+            title="Total Products"
+            value={totalProducts}
+            subtitle="In Catalog"
+            icon={Package}
+            color="orange"
+            onClick={() => onNavigateTab('products')}
+          />
+          <StatCard
+            title="Active Products"
+            value={activeProducts}
+            subtitle="Live in Store"
+            icon={CheckCircle}
+            color="emerald"
+            onClick={() => onNavigateTab('products')}
+          />
+          <StatCard
+            title="Inactive Products"
+            value={inactiveProducts}
+            subtitle="Hidden / Drafts"
+            icon={EyeOff}
+            color="slate"
+            onClick={() => onNavigateTab('products')}
+          />
+          <StatCard
+            title="Out of Stock"
+            value={outOfStockProducts}
+            subtitle="Zero Inventory"
+            icon={AlertOctagon}
+            color="rose"
+            onClick={() => onNavigateTab('inventory')}
+          />
+          <StatCard
+            title="Categories"
+            value={totalCategories}
+            subtitle="Active Slabs"
+            icon={Layers}
+            color="purple"
+            onClick={() => onNavigateTab('categories')}
+          />
+          <StatCard
+            title="Total Customers"
+            value={totalCustomers}
+            subtitle="Procuring Entities"
+            icon={Users}
+            color="blue"
+            onClick={() => onNavigateTab('customers')}
+          />
+        </div>
       </div>
 
-      {/* 3. Middle Section: Recent Customer Enquiries & Monthly Analytics */}
+      {/* 3. RFQ & Wholesale Pipeline Statistics Cards (Row 2) */}
+      <div>
+        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">
+          RFQ Quotation & Procurement Pipeline
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          <StatCard
+            title="Total Enquiries"
+            value={totalEnquiries}
+            subtitle="All Time RFQ"
+            icon={ClipboardList}
+            color="slate"
+            onClick={() => onNavigateTab('enquiries')}
+          />
+          <StatCard
+            title="New Enquiries"
+            value={newEnquiries}
+            subtitle="Awaiting Review"
+            icon={Clock}
+            color="blue"
+            onClick={() => onNavigateTab('enquiries')}
+          />
+          <StatCard
+            title="Preparing Quotes"
+            value={pendingQuotations}
+            subtitle="Under Pricing"
+            icon={AlertTriangle}
+            color="amber"
+            onClick={() => onNavigateTab('enquiries')}
+          />
+          <StatCard
+            title="Quotations Sent"
+            value={quotationsSent}
+            subtitle="Delivered via PDF"
+            icon={Send}
+            color="purple"
+            onClick={() => onNavigateTab('enquiries')}
+          />
+          <StatCard
+            title="Confirmed Orders"
+            value={confirmedOrdersCount}
+            subtitle="Won & Invoiced"
+            icon={FileCheck2}
+            color="emerald"
+            onClick={() => onNavigateTab('enquiries')}
+          />
+          <StatCard
+            title="Lost Enquiries"
+            value={lostEnquiries}
+            subtitle="Rejected / Lapsed"
+            icon={XCircle}
+            color="rose"
+            onClick={() => onNavigateTab('enquiries')}
+          />
+        </div>
+      </div>
+
+      {/* 4. Middle Section: Recent Customer Enquiries & Monthly Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Recent Enquiries (7 cols) */}
         <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col">
@@ -224,7 +324,7 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('enquiries')}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-[#F57C00] hover:text-[#E06D00] flex items-center gap-1 cursor-pointer"
             >
               <span>View All</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -233,8 +333,12 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
 
           <div className="divide-y divide-slate-100 flex-1">
             {recentEnquiries.length === 0 ? (
-              <div className="py-10 text-center text-xs text-slate-400">
-                No customer enquiries recorded yet.
+              <div className="py-12 text-center text-xs text-slate-400">
+                <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="font-semibold text-slate-600">No records available yet.</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Institutional RFQs will display here automatically upon receipt.
+                </p>
               </div>
             ) : (
               recentEnquiries.map((enq) => {
@@ -243,7 +347,7 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
                     ? 'bg-blue-50 text-blue-700 border-blue-200'
                     : enq.status === 'Quotation Sent'
                     ? 'bg-purple-50 text-purple-700 border-purple-200'
-                    : enq.status === 'Approved' || enq.status === 'Completed'
+                    : enq.status === 'Order Confirmed' || enq.status === 'Completed'
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                     : 'bg-slate-100 text-slate-700 border-slate-200';
 
@@ -269,10 +373,9 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
                       </p>
                       <p className="text-[11px] text-slate-500 truncate">
                         {enq.mandal ? `${enq.mandal}, ` : ''}{enq.district || enq.state} &bull;{' '}
-                        {new Date(enq.createdAt).toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                        })}
+                        <span title={formatISTDateTime(enq.createdAt)}>
+                          {formatRelativeTime(enq.createdAt)}
+                        </span>
                       </p>
                     </div>
 
@@ -288,7 +391,7 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
 
                       <button
                         onClick={() => onViewEnquiry(enq)}
-                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-slate-500 hover:text-[#F57C00] hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
                         title="View details"
                       >
                         <Eye className="w-4 h-4" />
@@ -312,15 +415,19 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
                 Monthly tender volume &amp; quote values from database
               </p>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-orange-50 text-[#F57C00] flex items-center justify-center">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
 
           <div className="py-4 space-y-4 flex-1">
             {monthlyAnalytics.length === 0 ? (
-              <div className="py-10 text-center text-xs text-slate-400">
-                Analytics will appear as enquiries are received.
+              <div className="py-12 text-center text-xs text-slate-400">
+                <TrendingUp className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="font-semibold text-slate-600">No records available yet.</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Analytics will compute automatically as customer RFQs are recorded.
+                </p>
               </div>
             ) : (
               monthlyAnalytics.map(([month, data]) => {
@@ -335,7 +442,7 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
                         <span className="font-mono text-slate-500">
                           {formatINR(data.totalValue)}
                         </span>
-                        <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-[10px]">
+                        <span className="font-bold text-[#F57C00] bg-orange-50 px-2 py-0.5 rounded-md text-[10px]">
                           {data.count} RFQ
                         </span>
                       </div>
@@ -343,7 +450,7 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
                     {/* Visual Progress Bar */}
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                       <div
-                        className="bg-blue-600 h-full rounded-full transition-all duration-500"
+                        className="bg-[#F57C00] h-full rounded-full transition-all duration-500"
                         style={{ width: `${barPercent}%` }}
                       />
                     </div>
@@ -360,7 +467,7 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
         </div>
       </div>
 
-      {/* 4. Bottom Section: Low Stock Alerts & Recently Added Products */}
+      {/* 5. Bottom Section: Low Stock Alerts & Recently Added Products */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Low Stock Alerts (5 cols) */}
         <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
@@ -375,7 +482,7 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('inventory')}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+              className="text-xs font-bold text-[#F57C00] hover:text-[#E06D00] cursor-pointer"
             >
               Manage Stock
             </button>
@@ -436,7 +543,7 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('products')}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-[#F57C00] hover:text-[#E06D00] flex items-center gap-1 cursor-pointer"
             >
               <span>View All Products</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -444,55 +551,60 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
           </div>
 
           <div className="divide-y divide-slate-100 mt-2">
-            {recentProducts.map((p) => (
-              <div
-                key={p.id}
-                className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50/70 px-2 rounded-xl transition-colors text-xs"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    className="w-10 h-10 rounded-lg object-cover bg-slate-100 border border-slate-200 shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <p className="font-bold text-slate-900 truncate">{p.name}</p>
-                    <p className="text-[11px] text-slate-500 truncate">
-                      {p.category} &bull; MOQ: {p.moq} {p.unit} &bull; HSN: {p.hsnCode}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="text-right">
-                    <div className="font-bold text-slate-900 font-mono">
-                      {formatINR(p.price)}
-                    </div>
-                    <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                        p.isActive !== false
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-slate-100 text-slate-500'
-                      }`}
-                    >
-                      {p.isActive !== false ? 'Active' : 'Hidden'}
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => onEditProduct(p)}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                    title="Edit Product"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                </div>
+            {recentProducts.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400">
+                No records available yet.
               </div>
-            ))}
+            ) : (
+              recentProducts.map((p) => (
+                <div
+                  key={p.id}
+                  className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50/70 px-2 rounded-xl transition-colors text-xs"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="w-10 h-10 rounded-lg object-cover bg-slate-100 border border-slate-200 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 truncate">{p.name}</p>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        {p.category} &bull; MOQ: {p.moq} {p.unit} &bull; HSN: {p.hsnCode}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <div className="font-bold text-slate-900 font-mono">
+                        {formatINR(p.price)}
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                          p.isActive !== false
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {p.isActive !== false ? 'Active' : 'Hidden'}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => onEditProduct(p)}
+                      className="p-1.5 text-slate-400 hover:text-[#F57C00] hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
+                      title="Edit Product"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 };
-

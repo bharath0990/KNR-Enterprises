@@ -285,7 +285,8 @@ export async function fetchTestimonials(options?: { activeOnly?: boolean }): Pro
       let query = supabase.from('testimonials').select('*').order('display_order', { ascending: true });
       if (options?.activeOnly) query = query.eq('is_active', true);
       const { data, error } = await query;
-      if (!error && data && data.length > 0) {
+      if (error) throw error;
+      if (data) {
         return data.map((t) => ({
           id: String(t.id),
           name: t.name,
@@ -441,7 +442,8 @@ export async function fetchFaqs(options?: { activeOnly?: boolean }): Promise<FAQ
       let query = supabase.from('faqs').select('*').order('display_order', { ascending: true });
       if (options?.activeOnly) query = query.eq('is_active', true);
       const { data, error } = await query;
-      if (!error && data && data.length > 0) {
+      if (error) throw error;
+      if (data) {
         return data.map((f) => ({
           id: String(f.id),
           category: f.category,
@@ -646,7 +648,8 @@ export async function fetchServices(options?: { activeOnly?: boolean }): Promise
       let query = supabase.from('services').select('*').order('display_order', { ascending: true });
       if (options?.activeOnly) query = query.eq('is_active', true);
       const { data, error } = await query;
-      if (!error && data && data.length > 0) {
+      if (error) throw error;
+      if (data) {
         return data.map((s) => ({
           id: String(s.id),
           title: s.title,

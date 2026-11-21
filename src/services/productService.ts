@@ -158,7 +158,8 @@ export async function fetchProducts(options?: { activeOnly?: boolean }): Promise
         query = query.eq('is_active', true);
       }
       const { data, error } = await query;
-      if (!error && data && data.length > 0) {
+      if (error) throw error;
+      if (data) {
         const mapped = data.map(mapDbProduct);
         // Cache to local store
         try {

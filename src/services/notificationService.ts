@@ -644,3 +644,4 @@ export function openWhatsAppDirect(phone: string, text: string): void {
     'noopener,noreferrer'
   );
 }
+
