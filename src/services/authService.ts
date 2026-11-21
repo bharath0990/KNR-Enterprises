@@ -55,8 +55,8 @@ export async function getAdminProfile(userId: string): Promise<AdminProfile | nu
       if (isAuthorized) {
         return {
           id: authData.user.id,
-          email: authData.user.email || 'anishreddy057@gmail.com',
-          fullName: (authData.user.user_metadata?.full_name as string) || 'Anish Reddy',
+          email: authData.user.email || 'admin@knrenterprises.com',
+          fullName: (authData.user.user_metadata?.full_name as string) || 'Administrator',
           role: 'super_admin',
           phone: '+91 8886175855',
           createdAt: authData.user.created_at,

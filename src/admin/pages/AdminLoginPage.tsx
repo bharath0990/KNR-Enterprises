@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   Database,
   ArrowLeft,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { useAuth } from '../../context/AuthContext';
@@ -30,6 +32,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
   // Login form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -139,7 +142,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="anishreddy057@gmail.com"
+                    placeholder="admin@example.com"
                     className="w-full bg-slate-50 border border-[#E2E8F0] rounded-xl pl-10 pr-3 py-2.5 text-sm text-[#111827] placeholder-slate-400 focus:outline-none focus:border-[#F57C00] focus:bg-white transition-colors"
                   />
                 </div>
@@ -164,13 +167,25 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full bg-slate-50 border border-[#E2E8F0] rounded-xl pl-10 pr-3 py-2.5 text-sm text-[#111827] placeholder-slate-400 focus:outline-none focus:border-[#F57C00] focus:bg-white transition-colors"
+                    className="w-full bg-slate-50 border border-[#E2E8F0] rounded-xl pl-10 pr-10 py-2.5 text-sm text-[#111827] placeholder-slate-400 focus:outline-none focus:border-[#F57C00] focus:bg-white transition-colors"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors cursor-pointer"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -189,16 +204,6 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
                     </>
                   )}
                 </button>
-              </div>
-
-              {/* Quick credential hint */}
-              <div className="mt-4 p-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-center space-y-1">
-                <span className="text-[11px] font-bold text-[#64748B] block">
-                  Admin Credentials:
-                </span>
-                <div className="font-mono text-xs text-[#111827] font-semibold">
-                  anishreddy057@gmail.com
-                </div>
               </div>
             </form>
           ) : (
@@ -235,7 +240,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
                     required
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="anishreddy057@gmail.com"
+                    placeholder="admin@example.com"
                     className="w-full bg-slate-50 border border-[#E2E8F0] rounded-xl pl-10 pr-3 py-2.5 text-sm text-[#111827] placeholder-slate-400 focus:outline-none focus:border-[#F57C00] focus:bg-white transition-colors"
                   />
                 </div>
