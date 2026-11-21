@@ -39,6 +39,8 @@ async function runLiveVerification() {
   const tables = [
     'categories',
     'products',
+    'product_images',
+    'admin_profiles',
     'enquiries',
     'enquiry_items',
     'quotations',

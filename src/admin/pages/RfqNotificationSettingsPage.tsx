@@ -506,6 +506,11 @@ export const RfqNotificationSettingsPage: React.FC = () => {
                         <div className="text-[10px] text-slate-400 truncate">
                           {log.recipientLabel}
                         </div>
+                        {log.errorMessage && (
+                          <div className="text-[10px] text-rose-500 font-mono mt-0.5 truncate" title={log.errorMessage}>
+                            {log.errorMessage}
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-3 px-3 text-center whitespace-nowrap">
