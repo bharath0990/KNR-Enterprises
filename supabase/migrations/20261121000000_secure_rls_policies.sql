@@ -49,3 +49,4 @@ ALTER TABLE public.rfq_notification_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.communication_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enquiry_status_history ENABLE ROW LEVEL SECURITY;
+

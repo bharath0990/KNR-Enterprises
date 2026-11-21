@@ -2,11 +2,58 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// Allowed origins for CORS and Origin Validation
+const ALLOWED_ORIGIN_PATTERNS = [
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+  /^https:\/\/[a-z0-9-]+\.github\.io$/,
+  /^https:\/\/(www\.)?knr-enterprises\.com$/,
+  /^https:\/\/[a-z0-9-]+\.supabase\.co$/,
+];
+
+function getCorsHeaders(origin: string | null) {
+  let isAllowed = false;
+  if (origin) {
+    isAllowed = ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(origin));
+  }
+  const allowOrigin = isAllowed && origin ? origin : "*";
+
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
+
+// In-Memory Rate Limiting: Max 15 requests per 5 minutes per IP
+const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 15;
+const ipRequestHistory = new Map<string, number[]>();
+
+function checkRateLimit(clientIp: string): boolean {
+  const now = Date.now();
+  const timestamps = ipRequestHistory.get(clientIp) || [];
+  const validTimestamps = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+
+  if (validTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
+    ipRequestHistory.set(clientIp, validTimestamps);
+    return false; // Rate limit exceeded
+  }
+
+  validTimestamps.push(now);
+  ipRequestHistory.set(clientIp, validTimestamps);
+
+  // Periodic cleanup if map grows
+  if (ipRequestHistory.size > 2000) {
+    for (const [ip, list] of ipRequestHistory.entries()) {
+      const filtered = list.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+      if (filtered.length === 0) ipRequestHistory.delete(ip);
+      else ipRequestHistory.set(ip, filtered);
+    }
+  }
+
+  return true;
+}
 
 interface EnquiryItem {
   id?: string;
@@ -252,25 +299,110 @@ function formatRfqWhatsApp(enquiry: CustomerEnquiry, items: EnquiryItem[]) {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get("origin") || req.headers.get("referer");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  try {
-    const payload = await req.json();
-    const enquiry: CustomerEnquiry = payload.enquiry;
-    const items: EnquiryItem[] = payload.items || [];
+  // 1. Rate Limiting Check
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+                   req.headers.get("cf-connecting-ip") ||
+                   req.headers.get("x-real-ip") ||
+                   "unknown-client";
 
-    if (!enquiry || !enquiry.enquiryNumber) {
+  if (!checkRateLimit(clientIp)) {
+    return new Response(
+      JSON.stringify({ error: "Rate limit exceeded. Please wait 5 minutes before submitting another request." }),
+      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // 2. Maximum Payload Size Check (Max 512 KB)
+  const contentLength = Number(req.headers.get("content-length") || 0);
+  if (contentLength > 512 * 1024) {
+    return new Response(
+      JSON.stringify({ error: "Payload too large. Maximum allowed size is 512 KB." }),
+      { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const rawBody = await req.text();
+    if (!rawBody || rawBody.length === 0) {
       return new Response(
-        JSON.stringify({ error: "Missing required enquiry details" }),
+        JSON.stringify({ error: "Empty request body" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const payload = JSON.parse(rawBody);
+
+    // 3. Admin-only Retry Authorization Check
+    const isRetryAction = payload.action === "retry";
+    const authHeader = req.headers.get("authorization");
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    if (isRetryAction) {
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized: Admin authentication token required to trigger manual retries." }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const token = authHeader.replace("Bearer ", "").trim();
+      const { data: userData, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !userData?.user) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: Valid administrator credentials required." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // 4. Server-Side Schema Validation
+    const enquiry: CustomerEnquiry = payload.enquiry;
+    const items: EnquiryItem[] = Array.isArray(payload.items) ? payload.items : [];
+
+    if (!enquiry || typeof enquiry !== "object") {
+      return new Response(
+        JSON.stringify({ error: "Invalid payload: 'enquiry' object is required." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!enquiry.enquiryNumber || typeof enquiry.enquiryNumber !== "string" || enquiry.enquiryNumber.length > 50) {
+      return new Response(
+        JSON.stringify({ error: "Invalid enquiry reference number." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!enquiry.customerName || typeof enquiry.customerName !== "string" || enquiry.customerName.trim().length < 2) {
+      return new Response(
+        JSON.stringify({ error: "Customer name must be at least 2 characters." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const cleanMobile = String(enquiry.mobileNumber || "").replace(/[^0-9+]/g, "");
+    if (cleanMobile.length < 10 || cleanMobile.length > 16) {
+      return new Response(
+        JSON.stringify({ error: "Invalid contact mobile number." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (items.length > 100) {
+      return new Response(
+        JSON.stringify({ error: "Exceeded maximum line items limit (100)." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const adminEmail = "knrenterprises679@gmail.com";
     const wa1Phone = "+918886175855";
@@ -279,7 +411,7 @@ serve(async (req) => {
     const emailData = formatRfqEmail(enquiry, items);
     const whatsAppMessage = formatRfqWhatsApp(enquiry, items);
 
-    // 1. Send Email via Resend
+    // 5. Send Email via Resend
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     let emailResult = {
       channel: "email",
@@ -325,7 +457,7 @@ serve(async (req) => {
       emailResult.errorMessage = "Email delivery pending: RESEND_API_KEY secret is not configured in Supabase.";
     }
 
-    // 2. WhatsApp Helpers
+    // 6. WhatsApp Helpers (Meta Cloud API)
     const waToken = Deno.env.get("WHATSAPP_API_TOKEN");
     const waPhoneId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
@@ -388,7 +520,7 @@ serve(async (req) => {
       sendWhatsAppMessage(wa2Phone, `WhatsApp Recipient 2 (${wa2Phone})`),
     ]);
 
-    // Record logs in rfq_notification_logs table
+    // 7. Record logs in rfq_notification_logs table
     const logsToInsert = [
       {
         enquiry_id: enquiry.id || null,
@@ -400,7 +532,7 @@ serve(async (req) => {
         content: emailData.textBody,
         status: emailResult.status,
         error_message: emailResult.errorMessage || (emailResult.providerId ? `Provider ID: ${emailResult.providerId}` : null),
-        retry_count: 0,
+        retry_count: isRetryAction ? 1 : 0,
         last_attempt_at: new Date().toISOString(),
       },
       {
@@ -413,7 +545,7 @@ serve(async (req) => {
         content: whatsAppMessage,
         status: wa1Result.status,
         error_message: wa1Result.errorMessage || (wa1Result.providerId ? `Meta Message ID: ${wa1Result.providerId}` : null),
-        retry_count: 0,
+        retry_count: isRetryAction ? 1 : 0,
         last_attempt_at: new Date().toISOString(),
       },
       {
@@ -426,7 +558,7 @@ serve(async (req) => {
         content: whatsAppMessage,
         status: wa2Result.status,
         error_message: wa2Result.errorMessage || (wa2Result.providerId ? `Meta Message ID: ${wa2Result.providerId}` : null),
-        retry_count: 0,
+        retry_count: isRetryAction ? 1 : 0,
         last_attempt_at: new Date().toISOString(),
       },
     ];
@@ -454,4 +586,3 @@ serve(async (req) => {
     );
   }
 });
-
