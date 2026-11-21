@@ -25,6 +25,7 @@ import { fetchCategories } from '../../services/categoryService';
 import { fetchEnquiries } from '../../services/enquiryService';
 import { fetchConfirmedOrders, fetchQuotations } from '../../services/quotationService';
 import { formatISTDateTime, formatRelativeTime } from '../../utils/date';
+import { getCustomerDedupKey } from '../../utils/customer';
 
 interface DashboardOverviewPageProps {
   onNavigateTab: (tab: AdminTab) => void;
@@ -87,26 +88,37 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
     };
   }, []);
 
-  // 1. Catalog & Product Statistics (Computed from real products)
+  // 1. Catalog & Product Statistics (Computed strictly from real products)
   const totalProducts = products.length;
-  const activeProducts = products.filter((p) => p.isActive !== false).length;
-  const inactiveProducts = products.filter((p) => p.isActive === false).length;
-  const outOfStockProducts = products.filter(
-    (p) => !p.inStock || (p.stockQuantity !== undefined && p.stockQuantity <= 0)
+  // Exclude records with missing, null, or invalid status
+  const activeProducts = products.filter(
+    (p) => typeof p.isActive === 'boolean' && p.isActive === true
   ).length;
+  const inactiveProducts = products.filter(
+    (p) => typeof p.isActive === 'boolean' && p.isActive === false
+  ).length;
+
+  // Correctly handles missing inventory: if inStock is false, or stock quantity is missing/<=0
+  const outOfStockProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (p.inStock === false) return true;
+      const stock = typeof p.stockQuantity === 'number' && !isNaN(p.stockQuantity) ? p.stockQuantity : null;
+      if (stock === null) return p.inStock !== true;
+      return stock <= 0;
+    }).length;
+  }, [products]);
+
   const totalCategories = categories.length;
 
-  // 2. Unique Customers (Computed from genuine customer enquiries and confirmed orders)
+  // 2. Unique Customers (Deduplicated with normalized 10-digit phone, email, or entity name)
   const totalCustomers = useMemo(() => {
     const customerKeys = new Set<string>();
     enquiries.forEach((e) => {
-      const raw = (e.mobileNumber || '').replace(/[^0-9]/g, '');
-      const key = raw.length >= 10 ? raw.slice(-10) : e.customerName.toLowerCase().trim();
+      const key = getCustomerDedupKey(e);
       if (key) customerKeys.add(key);
     });
     confirmedOrders.forEach((o) => {
-      const raw = (o.mobileNumber || '').replace(/[^0-9]/g, '');
-      const key = raw.length >= 10 ? raw.slice(-10) : o.customerName.toLowerCase().trim();
+      const key = getCustomerDedupKey(o);
       if (key) customerKeys.add(key);
     });
     return customerKeys.size;
@@ -118,11 +130,21 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
   const pendingQuotations = enquiries.filter(
     (e) => e.status === 'Quotation Preparing' || e.status === 'Contacted'
   ).length;
-  const quotationsSent = enquiries.filter((e) => e.status === 'Quotation Sent').length;
-  const confirmedOrdersCount =
-    confirmedOrders.length > 0
-      ? confirmedOrders.length
-      : enquiries.filter((e) => e.status === 'Order Confirmed' || e.status === 'Completed').length;
+
+  // Verified against actual quotation communication records and status
+  const quotationsSent = useMemo(() => {
+    const sentQuotations = quotations.filter(
+      (q) => q.status === 'Sent' || q.status === 'Accepted'
+    );
+    if (sentQuotations.length > 0) {
+      return sentQuotations.length;
+    }
+    return enquiries.filter((e) => e.status === 'Quotation Sent').length;
+  }, [quotations, enquiries]);
+
+  // Confirmed orders count actual confirmed order records from confirmed_orders table
+  const confirmedOrdersCount = confirmedOrders.length;
+
   const lostEnquiries = enquiries.filter(
     (e) => e.status === 'Lost' || e.status === 'Rejected'
   ).length;

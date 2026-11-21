@@ -12,7 +12,9 @@ import { AboutScreen } from './components/Screens/AboutScreen';
 import { ServicesScreen } from './components/Screens/ServicesScreen';
 import { FaqsScreen } from './components/Screens/FaqsScreen';
 import { ContactScreen } from './components/Screens/ContactScreen';
-import { AdminApp } from './admin/AdminApp';
+const AdminApp = React.lazy(() =>
+  import('./admin/AdminApp').then((m) => ({ default: m.AdminApp }))
+);
 import { AuthProvider } from './context/AuthContext';
 import { WebsiteSettingsProvider, useWebsiteSettings } from './context/WebsiteSettingsContext';
 import { RealtimeProvider } from './context/RealtimeContext';
@@ -177,15 +179,25 @@ function AppContent() {
     setLanguage((prev) => (prev === 'en' ? 'te' : 'en'));
   };
 
-  // If URL is /admin or #admin, render AdminApp
+  // If URL is /admin or #admin, render AdminApp via lazy-loaded chunk
   if (isAdminRoute) {
     return (
-      <AdminApp
-        onBackToWebsite={() => {
-          setIsAdminRoute(false);
-          window.location.hash = 'home';
-        }}
-      />
+      <React.Suspense
+        fallback={
+          <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-9 h-9 border-3 border-[#F57C00] border-t-transparent rounded-full animate-spin mb-3"></div>
+            <p className="text-xs font-bold text-slate-800">Loading KNR Administrator Portal...</p>
+            <p className="text-[11px] text-slate-400 mt-1">Connecting to Supabase Realtime...</p>
+          </div>
+        }
+      >
+        <AdminApp
+          onBackToWebsite={() => {
+            setIsAdminRoute(false);
+            window.location.hash = 'home';
+          }}
+        />
+      </React.Suspense>
     );
   }
 

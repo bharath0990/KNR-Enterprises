@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { CustomerEnquiry } from '../../types';
 import { fetchEnquiries } from '../../services/enquiryService';
 import { formatISTDate, formatRelativeTime } from '../../utils/date';
+import { getCustomerDedupKey } from '../../utils/customer';
 import {
   Users,
   Search,
@@ -65,8 +66,8 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onViewEnquiry }) =
     const map = new Map<string, AggregatedCustomer>();
 
     enquiries.forEach((enq) => {
-      const rawPhone = (enq.mobileNumber || '').replace(/[^0-9]/g, '');
-      const key = rawPhone.length >= 10 ? rawPhone.slice(-10) : enq.customerName.toLowerCase().trim();
+      const key = getCustomerDedupKey(enq);
+      if (!key) return;
 
       const existing = map.get(key);
       const enqValue = enq.totalAmount || 0;
