@@ -388,7 +388,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
             {/* Category Filter Tabs */}
             <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
-              {['All', 'Disinfectants', 'Vector', 'Waste', 'Lighting', 'Safety', 'Landscaping'].map((catLabel) => {
+              {['All', 'Cleaning Chemicals', 'Lighting Equipment', 'Cleaning Tools', 'Safety Equipment', 'Waste Management'].map((catLabel) => {
                 const isSelected = selectedCatFilter === catLabel;
                 return (
                   <button
@@ -408,7 +408,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
             {/* Product Cards with Direct Add to Cart & Prices */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {filteredProducts.slice(0, 8).map((product) => (
+              {filteredProducts.slice(0, 16).map((product) => (
                 <div
                   key={product.id}
                   className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between p-4 group"

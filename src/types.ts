@@ -43,9 +43,9 @@ export interface Product {
   moqDescription: string;
   stockQuantity?: number;
   lowStockThreshold?: number;
-  hsnCode: string;
-  rating: number;
-  reviewCount: number;
+  hsnCode?: string;
+  rating?: number;
+  reviewCount?: number;
   inStock: boolean;
   availability?: 'Available' | 'Enquire for Availability' | 'Discontinued';
   specifications: string[];
