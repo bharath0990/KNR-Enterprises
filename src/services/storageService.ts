@@ -50,10 +50,10 @@ export async function uploadProductImage(
       });
 
     if (uploadError) {
-      console.warn('Storage upload error, using object URL fallback:', uploadError.message);
+      console.error('Storage upload error:', uploadError.message);
       return {
-        url: URL.createObjectURL(file),
-        path: uniquePath,
+        url: '',
+        path: '',
         error: uploadError.message,
       };
     }
@@ -68,9 +68,10 @@ export async function uploadProductImage(
     };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error('Storage upload exception:', errorMsg);
     return {
-      url: URL.createObjectURL(file),
-      path: `error/${file.name}`,
+      url: '',
+      path: '',
       error: errorMsg,
     };
   }

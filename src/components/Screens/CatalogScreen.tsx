@@ -64,6 +64,11 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
     window.addEventListener('knr_product_price_updated', handleUpdate);
     window.addEventListener('knr_products_updated', handleUpdate);
 
+    // Synchronize live with remote Supabase database
+    fetchProducts({ activeOnly: true }).then(() => {
+      setProducts(getCatalogProducts());
+    });
+
     fetchCategories().then((cats) => {
       const activeCatNames = cats.filter((c) => c.isActive).map((c) => c.name);
       setCategories(['All Products', ...activeCatNames]);
@@ -299,26 +304,46 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                     </div>
                   </div>
 
-                  {/* Stock & MOQ Info */}
+                  {/* Availability Badge & MOQ Info */}
                   <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-slate-100">
-                    <div className="flex items-center gap-1 font-semibold text-[#16A34A]">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>{product.inStock ? 'In Stock' : 'Out of Stock'}</span>
-                    </div>
+                    {(() => {
+                      const avail = product.availability || (product.inStock ? 'Available' : 'Enquire for Availability');
+                      if (avail === 'Available') {
+                        return (
+                          <div className="flex items-center gap-1 font-semibold text-emerald-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>Available</span>
+                          </div>
+                        );
+                      }
+                      if (avail === 'Enquire for Availability') {
+                        return (
+                          <div className="flex items-center gap-1 font-semibold text-amber-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            <span>Enquire</span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="flex items-center gap-1 font-semibold text-rose-700">
+                          <span>Discontinued</span>
+                        </div>
+                      );
+                    })()}
                     <span className="text-[#64748B] font-mono text-[11px]">
                       MOQ: {product.moq ? `${product.moq} ${product.unit}` : `1 ${product.unit}`}
                     </span>
                   </div>
                 </div>
 
-                {/* Actions: Add to RFQ Cart, View Details & WhatsApp Enquiry */}
+                {/* Actions: Add to Enquiry, View Details & WhatsApp Enquiry */}
                 <div className="mt-4 space-y-2">
                   <button
                     onClick={() => onAddToCart && onAddToCart(product)}
                     className="w-full bg-[#F57C00] hover:bg-[#E06D00] text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs hover:shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
                   >
                     <ShoppingCart className="w-4 h-4" />
-                    <span>Add to RFQ Cart</span>
+                    <span>Add to Enquiry</span>
                   </button>
 
                   <div className="grid grid-cols-2 gap-2">
@@ -330,7 +355,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                       className="w-full bg-[#F8FAFC] hover:bg-slate-100 text-[#111827] border border-[#E2E8F0] font-semibold text-xs py-2 px-2.5 rounded-xl flex items-center justify-center gap-1 cursor-pointer transition-colors"
                     >
                       <Eye className="w-3.5 h-3.5 text-[#F57C00]" />
-                      <span>Details</span>
+                      <span>View Details</span>
                     </button>
 
                     <button

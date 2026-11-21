@@ -140,9 +140,21 @@ export async function submitRfqEnquiry(
   const estimatedGst = Math.round(subtotal * 0.18);
   const totalAmount = subtotal + estimatedGst;
 
-  const year = new Date().getFullYear();
-  const randNum = Math.floor(10000 + Math.random() * 90000);
-  const enquiryNumber = `KNR-RFQ-${year}-${randNum}`;
+  const now = new Date();
+  const yyyymmdd = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const randSeq = String(Math.floor(1000 + Math.random() * 9000));
+  let enquiryNumber = `KNR-RFQ-${yyyymmdd}-${randSeq}`;
+
+  if (isSupabaseConfigured()) {
+    try {
+      const { data: generatedRef } = await supabase.rpc('generate_rfq_reference');
+      if (generatedRef && typeof generatedRef === 'string') {
+        enquiryNumber = generatedRef;
+      }
+    } catch {
+      // fallback to formatted sequence
+    }
+  }
 
   // Generate robust UUID compatible with Postgres UUID primary key
   const generatedId =

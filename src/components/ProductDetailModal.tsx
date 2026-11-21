@@ -97,16 +97,30 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       (e.target as HTMLImageElement).src = getAssetUrl('/hero-knr-products.jpg');
                     }}
                   />
-                  {product.inStock ? (
-                    <span className="absolute top-3 left-3 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase rounded-md tracking-wider flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      In Stock at Depot
-                    </span>
-                  ) : (
-                    <span className="absolute top-3 left-3 px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold uppercase rounded-md tracking-wider">
-                      Batch Made to Order
-                    </span>
-                  )}
+                  {(() => {
+                    const avail = product.availability || (product.inStock ? 'Available' : 'Enquire for Availability');
+                    if (avail === 'Available') {
+                      return (
+                        <span className="absolute top-3 left-3 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase rounded-md tracking-wider flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Available at Depot
+                        </span>
+                      );
+                    }
+                    if (avail === 'Enquire for Availability') {
+                      return (
+                        <span className="absolute top-3 left-3 px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase rounded-md tracking-wider flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          Enquire for Availability
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="absolute top-3 left-3 px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold uppercase rounded-md tracking-wider">
+                        Discontinued
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 {/* Thumbnails if multiple images exist */}
@@ -275,7 +289,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     className="flex-1 bg-[#F57C00] hover:bg-[#E06D00] text-white py-3 px-6 rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-orange-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <ShoppingCart className="w-4 h-4" />
-                    <span>Add to RFQ Cart ({quantity} {product.unit})</span>
+                    <span>Add to Enquiry ({quantity} {product.unit})</span>
                   </button>
 
                   <a

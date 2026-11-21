@@ -88,25 +88,20 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
     };
   }, []);
 
-  // 1. Catalog & Product Statistics (Computed strictly from real products)
+  // 1. Catalog & Product Statistics (Wholesale RFQ Model - Manual Availability)
   const totalProducts = products.length;
-  // Exclude records with missing, null, or invalid status
   const activeProducts = products.filter(
     (p) => typeof p.isActive === 'boolean' && p.isActive === true
   ).length;
-  const inactiveProducts = products.filter(
-    (p) => typeof p.isActive === 'boolean' && p.isActive === false
+  const availableCount = products.filter(
+    (p) => p.isActive !== false && (p.availability === 'Available' || (!p.availability && p.inStock !== false))
   ).length;
-
-  // Correctly handles missing inventory: if inStock is false, or stock quantity is missing/<=0
-  const outOfStockProducts = useMemo(() => {
-    return products.filter((p) => {
-      if (p.inStock === false) return true;
-      const stock = typeof p.stockQuantity === 'number' && !isNaN(p.stockQuantity) ? p.stockQuantity : null;
-      if (stock === null) return p.inStock !== true;
-      return stock <= 0;
-    }).length;
-  }, [products]);
+  const enquireCount = products.filter(
+    (p) => p.isActive !== false && p.availability === 'Enquire for Availability'
+  ).length;
+  const discontinuedCount = products.filter(
+    (p) => p.availability === 'Discontinued' || p.isActive === false
+  ).length;
 
   const totalCategories = categories.length;
 
@@ -148,14 +143,6 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
   const lostEnquiries = enquiries.filter(
     (e) => e.status === 'Lost' || e.status === 'Rejected'
   ).length;
-
-  const lowStockProductsList = useMemo(() => {
-    return products.filter((p) => {
-      const threshold = p.lowStockThreshold ?? 10;
-      const stock = p.stockQuantity ?? 100;
-      return stock <= threshold;
-    });
-  }, [products]);
 
   // Recently added products (top 5)
   const recentProducts = useMemo(() => {
@@ -217,10 +204,10 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
         </div>
       </div>
 
-      {/* 2. Catalog & Product Inventory Statistics Cards (Row 1) */}
+      {/* 2. Catalog & Availability Statistics Cards (Row 1) */}
       <div>
         <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">
-          Catalog & Inventory Statistics
+          Catalog &amp; Product Availability (Wholesale Model)
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           <StatCard
@@ -232,36 +219,36 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
             onClick={() => onNavigateTab('products')}
           />
           <StatCard
-            title="Active Products"
-            value={activeProducts}
-            subtitle="Live in Store"
+            title="Available Now"
+            value={availableCount}
+            subtitle="Ready to Dispatch"
             icon={CheckCircle}
             color="emerald"
             onClick={() => onNavigateTab('products')}
           />
           <StatCard
-            title="Inactive Products"
-            value={inactiveProducts}
-            subtitle="Hidden / Drafts"
+            title="On Enquiry"
+            value={enquireCount}
+            subtitle="Lead Time Supply"
+            icon={AlertOctagon}
+            color="amber"
+            onClick={() => onNavigateTab('products')}
+          />
+          <StatCard
+            title="Discontinued"
+            value={discontinuedCount}
+            subtitle="Archived / Inactive"
             icon={EyeOff}
             color="slate"
             onClick={() => onNavigateTab('products')}
           />
           <StatCard
-            title="Out of Stock"
-            value={outOfStockProducts}
-            subtitle="Zero Inventory"
-            icon={AlertOctagon}
-            color="rose"
-            onClick={() => onNavigateTab('inventory')}
-          />
-          <StatCard
             title="Categories"
             value={totalCategories}
-            subtitle="Active Slabs"
+            subtitle="Wholesale Slabs"
             icon={Layers}
             color="purple"
-            onClick={() => onNavigateTab('categories')}
+            onClick={() => onNavigateTab('website-control')}
           />
           <StatCard
             title="Total Customers"
@@ -489,66 +476,74 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
         </div>
       </div>
 
-      {/* 5. Bottom Section: Low Stock Alerts & Recently Added Products */}
+      {/* 5. Bottom Section: RFQ Operations & Recently Added Products */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Low Stock Alerts (5 cols) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                <AlertTriangle className="w-4 h-4" />
+        {/* Wholesale RFQ Operations (5 cols) */}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-orange-50 text-[#F57C00] flex items-center justify-center">
+                  <ClipboardList className="w-4 h-4" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900">
+                  RFQ Operational Pipeline
+                </h3>
               </div>
-              <h3 className="text-base font-bold text-slate-900">
-                Low Stock Alerts
-              </h3>
+              <button
+                onClick={() => onNavigateTab('enquiries')}
+                className="text-xs font-bold text-[#F57C00] hover:text-[#E06D00] cursor-pointer"
+              >
+                View Enquiries
+              </button>
             </div>
-            <button
-              onClick={() => onNavigateTab('inventory')}
-              className="text-xs font-bold text-[#F57C00] hover:text-[#E06D00] cursor-pointer"
-            >
-              Manage Stock
-            </button>
+
+            <div className="space-y-3 mt-4 text-xs">
+              <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2 text-blue-900 font-semibold">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  <span>New Customer Requests</span>
+                </div>
+                <span className="font-mono font-bold text-sm text-blue-800 bg-white px-2 py-0.5 rounded-lg shadow-2xs">
+                  {newEnquiries}
+                </span>
+              </div>
+
+              <div className="p-3 bg-amber-50/70 border border-amber-100 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2 text-amber-900 font-semibold">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  <span>Quotes Under Preparation</span>
+                </div>
+                <span className="font-mono font-bold text-sm text-amber-800 bg-white px-2 py-0.5 rounded-lg shadow-2xs">
+                  {pendingQuotations}
+                </span>
+              </div>
+
+              <div className="p-3 bg-purple-50/70 border border-purple-100 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2 text-purple-900 font-semibold">
+                  <Send className="w-4 h-4 text-purple-600" />
+                  <span>Quotations Delivered</span>
+                </div>
+                <span className="font-mono font-bold text-sm text-purple-800 bg-white px-2 py-0.5 rounded-lg shadow-2xs">
+                  {quotationsSent}
+                </span>
+              </div>
+
+              <div className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2 text-emerald-900 font-semibold">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span>Orders Confirmed &amp; Invoiced</span>
+                </div>
+                <span className="font-mono font-bold text-sm text-emerald-800 bg-white px-2 py-0.5 rounded-lg shadow-2xs">
+                  {confirmedOrdersCount}
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className="divide-y divide-slate-100 mt-2">
-            {lowStockProductsList.length === 0 ? (
-              <div className="py-8 text-center text-xs text-emerald-600 font-semibold">
-                All catalog inventory items are adequately stocked.
-              </div>
-            ) : (
-              lowStockProductsList.slice(0, 4).map((p) => (
-                <div
-                  key={p.id}
-                  className="py-2.5 flex items-center justify-between gap-3 text-xs"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="w-9 h-9 rounded-lg object-cover bg-slate-100 border border-slate-200 shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-800 truncate">{p.name}</p>
-                      <p className="text-[11px] text-slate-400">
-                        Threshold: {p.lowStockThreshold ?? 10} {p.unit}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <span
-                      className={`font-mono font-bold px-2 py-0.5 rounded-md ${
-                        (p.stockQuantity ?? 0) <= 0
-                          ? 'bg-rose-100 text-rose-700'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}
-                    >
-                      {p.stockQuantity ?? 0} {p.unit}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Wholesale RFQ Model</span>
+            <span className="font-semibold text-emerald-700">Offline Procurement Ready</span>
           </div>
         </div>
 

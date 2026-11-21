@@ -6,18 +6,11 @@ import { AdminLoginPage } from './pages/AdminLoginPage';
 import { DashboardOverviewPage } from './pages/DashboardOverviewPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { ProductFormPage } from './pages/ProductFormPage';
-import { CategoriesPage } from './pages/CategoriesPage';
-import { InventoryPage } from './pages/InventoryPage';
 import { EnquiriesPage } from './pages/EnquiriesPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
-import { WebsiteContentPage } from './pages/WebsiteContentPage';
-import { TestimonialsPage } from './pages/TestimonialsPage';
-import { FaqsPage } from './pages/FaqsPage';
-import { ServicesPage } from './pages/ServicesPage';
-import { WebsiteSettingsPage } from './pages/WebsiteSettingsPage';
-import { RfqNotificationSettingsPage } from './pages/RfqNotificationSettingsPage';
-import { AdminProfilePage } from './pages/AdminProfilePage';
+import { WebsiteControlPage, WebsiteControlSubtab } from './pages/WebsiteControlPage';
+import { SettingsPage, SettingsSubtab } from './pages/SettingsPage';
 import { fetchEnquiries } from '../services/enquiryService';
 import { fetchProducts } from '../services/productService';
 
@@ -35,10 +28,12 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
     const validTabs: AdminTab[] = [
       'dashboard',
       'products',
-      'categories',
-      'inventory',
       'enquiries',
       'customers',
+      'website-control',
+      'settings',
+      'categories',
+      'inventory',
       'analytics',
       'website-content',
       'content',
@@ -46,12 +41,12 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
       'faqs',
       'services',
       'website-settings',
-      'settings',
       'rfq-notifications',
       'admin-profile',
     ];
-    if (clean === 'content') return 'website-content';
-    if (clean === 'settings') return 'website-settings';
+    if (clean === 'content' || clean === 'website-content' || clean === 'categories' || clean === 'services' || clean === 'faqs' || clean === 'testimonials') return 'website-control';
+    if (clean === 'website-settings' || clean === 'rfq-notifications' || clean === 'admin-profile') return 'settings';
+    if (clean === 'inventory') return 'products';
     if (validTabs.includes(clean as AdminTab)) return clean as AdminTab;
     return 'dashboard';
   });
@@ -72,8 +67,24 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
   // Sync hash with currentTab
   const handleSelectTab = (tab: AdminTab) => {
     let target = tab;
-    if (tab === 'content') target = 'website-content';
-    if (tab === 'settings') target = 'website-settings';
+    if (
+      tab === 'content' ||
+      tab === 'website-content' ||
+      tab === 'categories' ||
+      tab === 'services' ||
+      tab === 'faqs' ||
+      tab === 'testimonials'
+    ) {
+      target = 'website-control';
+    } else if (
+      tab === 'website-settings' ||
+      tab === 'rfq-notifications' ||
+      tab === 'admin-profile'
+    ) {
+      target = 'settings';
+    } else if (tab === 'inventory') {
+      target = 'products';
+    }
 
     setCurrentTab(target);
     setProductFormMode({ isOpen: false, product: null });
@@ -218,18 +229,12 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
         </>
       )}
 
-      {/* 3. Categories */}
-      {currentTab === 'categories' && <CategoriesPage />}
-
-      {/* 4. Inventory */}
-      {currentTab === 'inventory' && <InventoryPage />}
-
-      {/* 5. Customer Enquiries */}
+      {/* 3. Customer Enquiries / RFQs */}
       {currentTab === 'enquiries' && (
         <EnquiriesPage initialSelectedEnquiry={selectedEnquiry} />
       )}
 
-      {/* 6. Customers Directory */}
+      {/* 4. Customers Directory */}
       {currentTab === 'customers' && (
         <CustomersPage
           onViewEnquiry={(enq) => {
@@ -239,33 +244,27 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
         />
       )}
 
-      {/* 7. Procurement Analytics */}
+      {/* 5. Website Control (CMS) */}
+      {(currentTab === 'website-control' ||
+        currentTab === 'website-content' ||
+        currentTab === 'content' ||
+        currentTab === 'categories' ||
+        currentTab === 'testimonials' ||
+        currentTab === 'faqs' ||
+        currentTab === 'services') && (
+        <WebsiteControlPage />
+      )}
+
+      {/* 6. Settings */}
+      {(currentTab === 'settings' ||
+        currentTab === 'website-settings' ||
+        currentTab === 'rfq-notifications' ||
+        currentTab === 'admin-profile') && (
+        <SettingsPage user={user} />
+      )}
+
+      {/* Backward-compatible fallback for analytics */}
       {currentTab === 'analytics' && <AnalyticsPage />}
-
-      {/* 8. Website Content */}
-      {(currentTab === 'website-content' || currentTab === 'content') && (
-        <WebsiteContentPage />
-      )}
-
-      {/* 9. Testimonials */}
-      {currentTab === 'testimonials' && <TestimonialsPage />}
-
-      {/* 10. FAQs */}
-      {currentTab === 'faqs' && <FaqsPage />}
-
-      {/* 11. Services */}
-      {currentTab === 'services' && <ServicesPage />}
-
-      {/* 12. Website Settings */}
-      {(currentTab === 'website-settings' || currentTab === 'settings') && (
-        <WebsiteSettingsPage />
-      )}
-
-      {/* 13. RFQ Notification Settings */}
-      {currentTab === 'rfq-notifications' && <RfqNotificationSettingsPage />}
-
-      {/* 14. Admin Profile */}
-      {currentTab === 'admin-profile' && <AdminProfilePage user={user} />}
     </AdminLayout>
   );
 };

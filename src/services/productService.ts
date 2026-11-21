@@ -12,6 +12,9 @@ export interface CatalogItem {
   price: number;
   unit: string;
   inStock: boolean;
+  availability?: string;
+  sku?: string;
+  hsnCode?: string;
   category: string;
   image: string;
   moq?: number;
@@ -37,6 +40,16 @@ function mapDbProduct(row: Record<string, unknown>): Product {
     ? JSON.parse(row.certifications)
     : [];
 
+  const galleryImages = Array.isArray(row.gallery_images)
+    ? (row.gallery_images as string[])
+    : typeof row.gallery_images === 'string'
+    ? JSON.parse(row.gallery_images)
+    : [];
+
+  const rawInStock = Boolean(row.in_stock ?? true);
+  const rawAvailability = row.availability ? String(row.availability) : undefined;
+  const availability = (rawAvailability as any) || (rawInStock ? 'Available' : 'Enquire for Availability');
+
   return {
     id: String(row.id),
     name: String(row.name || ''),
@@ -55,10 +68,12 @@ function mapDbProduct(row: Record<string, unknown>): Product {
     moqDescription: String(row.moq_description || `${row.moq || 1} ${row.unit || 'Unit'}`),
     stockQuantity: Number(row.stock_quantity ?? 100),
     lowStockThreshold: Number(row.low_stock_threshold ?? 10),
-    inStock: Boolean(row.in_stock ?? true),
+    inStock: availability !== 'Discontinued',
+    availability,
     badge: row.badge ? String(row.badge) : undefined,
     badgeColor: row.badge_color ? String(row.badge_color) : 'orange',
     image: String(row.image || '/hero-knr-products.jpg'),
+    galleryImages,
     rating: Number(row.rating || 4.8),
     reviewCount: Number(row.review_count || 0),
     specifications: specs,
@@ -94,9 +109,14 @@ function mapProductToDb(prod: Partial<Product>): Record<string, unknown> {
   if (prod.unit !== undefined) row.unit = prod.unit;
   if (prod.moq !== undefined) row.moq = prod.moq;
   if (prod.moqDescription !== undefined) row.moq_description = prod.moqDescription;
-  if (prod.stockQuantity !== undefined) row.stock_quantity = prod.stockQuantity;
-  if (prod.lowStockThreshold !== undefined) row.low_stock_threshold = prod.lowStockThreshold;
-  if (prod.inStock !== undefined) row.in_stock = prod.inStock;
+  if (prod.availability !== undefined) {
+    row.availability = prod.availability;
+    row.in_stock = prod.availability !== 'Discontinued';
+  } else if (prod.inStock !== undefined) {
+    row.in_stock = prod.inStock;
+    row.availability = prod.inStock ? 'Available' : 'Enquire for Availability';
+  }
+  if (prod.galleryImages !== undefined) row.gallery_images = prod.galleryImages;
   if (prod.badge !== undefined) row.badge = prod.badge;
   if (prod.badgeColor !== undefined) row.badge_color = prod.badgeColor;
   if (prod.image !== undefined) row.image = prod.image;
@@ -265,16 +285,6 @@ export async function createProduct(prod: Partial<Product>): Promise<Product> {
 
       if (error) throw new Error(error.message);
       if (data) {
-        // Log initial stock in inventory_logs
-        await supabase.from('inventory_logs').insert({
-          product_id: newProduct.id,
-          previous_stock: 0,
-          new_stock: newProduct.stockQuantity || 100,
-          change_amount: newProduct.stockQuantity || 100,
-          change_type: 'initial_stock',
-          notes: 'Product created via Admin Dashboard',
-          created_by: 'Administrator',
-        });
         const mapped = mapDbProduct(data);
         syncToLocalStore(mapped, 'add');
         return mapped;
@@ -323,16 +333,20 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
 }
 
 /**
- * Delete product safely
+ * Delete product safely (or soft-delete / archive)
  */
 export async function deleteProduct(id: string): Promise<{ success: boolean; error?: string }> {
   if (isSupabaseConfigured()) {
     try {
       const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) throw new Error(error.message);
+      if (error) {
+        // If foreign key constraint blocks deletion, fall back to safe archival
+        console.warn('Foreign key or deletion error, archiving product instead:', error.message);
+        return safeArchiveProduct(id);
+      }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      return { success: false, error: errorMsg };
+      return safeArchiveProduct(id);
     }
   }
 
@@ -342,6 +356,19 @@ export async function deleteProduct(id: string): Promise<{ success: boolean; err
   window.dispatchEvent(new CustomEvent('knr_products_updated'));
   window.dispatchEvent(new CustomEvent('knr_product_price_updated'));
   return { success: true };
+}
+
+/**
+ * Safe Archival for Products: Marks inactive & discontinued so historical RFQs remain intact
+ */
+export async function safeArchiveProduct(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await updateProduct(id, { isActive: false, availability: 'Discontinued' });
+    return { success: true };
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: errorMsg };
+  }
 }
 
 /**
@@ -395,16 +422,22 @@ export function getCatalogProducts(): CatalogItem[] {
     const savedOverrides = localStorage.getItem(PRICE_OVERRIDES_KEY);
     const overrides: Record<string, number> = savedOverrides ? JSON.parse(savedOverrides) : {};
 
-    return products.map((prod) => ({
-      id: prod.id,
-      name: prod.name,
-      description: prod.description,
-      price: typeof overrides[prod.id] === 'number' ? overrides[prod.id] : prod.price,
-      unit: prod.unit.startsWith('/') ? prod.unit : `/${prod.unit}`,
-      inStock: prod.inStock,
-      category: prod.category,
-      image: prod.image,
-    }));
+    return products
+      .filter((prod) => prod.isActive !== false)
+      .map((prod) => ({
+        id: prod.id,
+        name: prod.name,
+        description: prod.description,
+        price: typeof overrides[prod.id] === 'number' ? overrides[prod.id] : prod.price,
+        unit: prod.unit.startsWith('/') ? prod.unit : `/${prod.unit}`,
+        inStock: prod.inStock && prod.availability !== 'Discontinued',
+        availability: prod.availability || (prod.inStock ? 'Available' : 'Enquire for Availability'),
+        category: prod.category,
+        image: prod.image,
+        sku: prod.sku,
+        hsnCode: prod.hsnCode,
+        moq: prod.moq,
+      }));
   } catch (err) {
     console.warn('Could not read catalog items:', err);
     return [];

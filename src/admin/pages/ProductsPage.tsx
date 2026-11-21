@@ -47,8 +47,8 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all');
-  const [selectedStock, setSelectedStock] = useState<'all' | 'in_stock' | 'low_stock' | 'out_of_stock'>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'price_asc' | 'price_desc' | 'stock' | 'updated'>('updated');
+  const [selectedAvailability, setSelectedAvailability] = useState<'all' | 'Available' | 'Enquire for Availability' | 'Discontinued'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'price_asc' | 'price_desc' | 'availability' | 'updated'>('updated');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -94,12 +94,9 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
       if (selectedStatus === 'active' && p.isActive === false) return false;
       if (selectedStatus === 'inactive' && p.isActive !== false) return false;
 
-      // Stock filter
-      const stock = p.stockQuantity ?? 100;
-      const threshold = p.lowStockThreshold ?? 10;
-      if (selectedStock === 'in_stock' && (!p.inStock || stock <= 0)) return false;
-      if (selectedStock === 'out_of_stock' && stock > 0 && p.inStock) return false;
-      if (selectedStock === 'low_stock' && (stock <= 0 || stock > threshold)) return false;
+      // Availability filter
+      const prodAvail = p.availability || (p.inStock ? 'Available' : 'Enquire for Availability');
+      if (selectedAvailability !== 'all' && prodAvail !== selectedAvailability) return false;
 
       // Search query
       if (searchQuery.trim()) {
@@ -117,10 +114,14 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       if (sortBy === 'price_asc') return a.price - b.price;
       if (sortBy === 'price_desc') return b.price - a.price;
-      if (sortBy === 'stock') return (b.stockQuantity ?? 0) - (a.stockQuantity ?? 0);
+      if (sortBy === 'availability') {
+        const avA = a.availability || 'Available';
+        const avB = b.availability || 'Available';
+        return avA.localeCompare(avB);
+      }
       return (new Date(b.updatedAt || b.createdAt || 0).getTime()) - (new Date(a.updatedAt || a.createdAt || 0).getTime());
     });
-  }, [products, searchQuery, selectedCategory, selectedStatus, selectedStock, sortBy]);
+  }, [products, searchQuery, selectedCategory, selectedStatus, selectedAvailability, sortBy]);
 
   // Paginated items
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
@@ -240,20 +241,20 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
             </select>
           </div>
 
-          {/* Stock Filter (2 cols) */}
+          {/* Availability Filter (2 cols) */}
           <div className="lg:col-span-2">
             <select
-              value={selectedStock}
+              value={selectedAvailability}
               onChange={(e) => {
-                setSelectedStock(e.target.value as any);
+                setSelectedAvailability(e.target.value as any);
                 setCurrentPage(1);
               }}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
             >
-              <option value="all">All Stock Tiers</option>
-              <option value="in_stock">In Stock</option>
-              <option value="low_stock">Low Stock Alert</option>
-              <option value="out_of_stock">Out of Stock</option>
+              <option value="all">All Availability</option>
+              <option value="Available">Available</option>
+              <option value="Enquire for Availability">Enquire for Availability</option>
+              <option value="Discontinued">Discontinued</option>
             </select>
           </div>
         </div>
@@ -275,7 +276,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
               <option value="name">Product Name (A-Z)</option>
               <option value="price_asc">Price: Low to High</option>
               <option value="price_desc">Price: High to Low</option>
-              <option value="stock">Stock Available</option>
+              <option value="availability">Availability Status</option>
             </select>
           </div>
         </div>
@@ -293,7 +294,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                 <th className="py-3 px-3">HSN Code</th>
                 <th className="py-3 px-3 text-right">Price (₹)</th>
                 <th className="py-3 px-3 text-center">MOQ</th>
-                <th className="py-3 px-3 text-center">Stock</th>
+                <th className="py-3 px-3 text-center">Availability</th>
                 <th className="py-3 px-3 text-center">Status</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -308,11 +309,6 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                 </tr>
               ) : (
                 paginatedProducts.map((p) => {
-                  const stock = p.stockQuantity ?? 100;
-                  const threshold = p.lowStockThreshold ?? 10;
-                  const isOutOfStock = !p.inStock || stock <= 0;
-                  const isLowStock = stock > 0 && stock <= threshold;
-
                   return (
                     <tr
                       key={p.id}
@@ -369,19 +365,32 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({
                         </span>
                       </td>
 
-                      {/* Stock Quantity */}
+                      {/* Availability Status */}
                       <td className="py-3 px-3 text-center whitespace-nowrap">
-                        <span
-                          className={`font-mono font-bold px-2.5 py-0.5 rounded-md inline-flex items-center gap-1 ${
-                            isOutOfStock
-                              ? 'bg-rose-100 text-rose-700'
-                              : isLowStock
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-emerald-100 text-emerald-800'
-                          }`}
-                        >
-                          {stock} {p.unit}
-                        </span>
+                        {(() => {
+                          const avail = p.availability || (p.inStock ? 'Available' : 'Enquire for Availability');
+                          if (avail === 'Available') {
+                            return (
+                              <span className="font-bold text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Available
+                              </span>
+                            );
+                          }
+                          if (avail === 'Enquire for Availability') {
+                            return (
+                              <span className="font-bold text-[11px] px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                Enquire
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="font-bold text-[11px] px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1">
+                              Discontinued
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* Status Toggle Badge */}

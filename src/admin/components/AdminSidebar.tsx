@@ -57,20 +57,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       icon: Package,
     },
     {
-      id: 'categories' as AdminTab,
-      label: 'Categories',
-      icon: Layers,
-    },
-    {
-      id: 'inventory' as AdminTab,
-      label: 'Inventory',
-      icon: Boxes,
-      badge: lowStockCount > 0 ? `${lowStockCount} alert` : undefined,
-      badgeColor: 'bg-amber-100 text-amber-800 border border-amber-200',
-    },
-    {
       id: 'enquiries' as AdminTab,
-      label: 'Customer Enquiries',
+      label: 'Enquiries / RFQs',
       icon: ClipboardList,
       badge: enquiriesCount > 0 ? String(enquiriesCount) : undefined,
       badgeColor: 'bg-[#F57C00] text-white font-bold',
@@ -81,52 +69,39 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       icon: Users,
     },
     {
-      id: 'analytics' as AdminTab,
-      label: 'Analytics',
-      icon: BarChart3,
-    },
-    {
-      id: 'website-content' as AdminTab,
-      label: 'Website Content',
+      id: 'website-control' as AdminTab,
+      label: 'Website Control',
       icon: Globe,
     },
     {
-      id: 'testimonials' as AdminTab,
-      label: 'Testimonials',
-      icon: Quote,
-    },
-    {
-      id: 'faqs' as AdminTab,
-      label: 'FAQs',
-      icon: HelpCircle,
-    },
-    {
-      id: 'services' as AdminTab,
-      label: 'Services',
-      icon: Briefcase,
-    },
-    {
-      id: 'website-settings' as AdminTab,
-      label: 'Website Settings',
+      id: 'settings' as AdminTab,
+      label: 'Settings',
       icon: Settings,
-    },
-    {
-      id: 'rfq-notifications' as AdminTab,
-      label: 'RFQ Notifications',
-      icon: BellRing,
-    },
-    {
-      id: 'admin-profile' as AdminTab,
-      label: 'Admin Profile',
-      icon: ShieldCheck,
     },
   ];
 
   // Helper to determine if item is active
   const isItemActive = (id: AdminTab) => {
     if (currentTab === id) return true;
-    if (id === 'website-content' && currentTab === 'content') return true;
-    if (id === 'website-settings' && currentTab === 'settings') return true;
+    if (
+      id === 'website-control' &&
+      (currentTab === 'categories' ||
+        currentTab === 'website-content' ||
+        currentTab === 'content' ||
+        currentTab === 'testimonials' ||
+        currentTab === 'faqs' ||
+        currentTab === 'services')
+    ) {
+      return true;
+    }
+    if (
+      id === 'settings' &&
+      (currentTab === 'website-settings' ||
+        currentTab === 'rfq-notifications' ||
+        currentTab === 'admin-profile')
+    ) {
+      return true;
+    }
     return false;
   };
 

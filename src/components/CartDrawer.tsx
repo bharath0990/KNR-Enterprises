@@ -116,10 +116,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 text-base">
-                  {language === 'te' ? 'మీ కార్ట్' : 'Your Cart'}
+                  {language === 'te' ? 'హోల్‌సేల్ ఎంక్వైరీ కార్ట్' : 'Wholesale Enquiry Cart'}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  {items.length} {items.length === 1 ? 'item' : 'items'}
+                  {items.length} {items.length === 1 ? 'product selected' : 'products selected'} (RFQ)
                 </p>
               </div>
             </div>

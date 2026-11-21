@@ -5,10 +5,13 @@ export type Language = 'en' | 'te';
 export type AdminTab = 
   | 'dashboard'
   | 'products'
-  | 'categories'
-  | 'inventory'
   | 'enquiries'
   | 'customers'
+  | 'website-control'
+  | 'settings'
+  // Backward compatible subviews
+  | 'categories'
+  | 'inventory'
   | 'analytics'
   | 'website-content'
   | 'content'
@@ -16,7 +19,6 @@ export type AdminTab =
   | 'faqs'
   | 'services'
   | 'website-settings'
-  | 'settings'
   | 'rfq-notifications'
   | 'admin-profile';
 
@@ -45,6 +47,7 @@ export interface Product {
   rating: number;
   reviewCount: number;
   inStock: boolean;
+  availability?: 'Available' | 'Enquire for Availability' | 'Discontinued';
   specifications: string[];
   features?: string[];
   certifications?: string[];

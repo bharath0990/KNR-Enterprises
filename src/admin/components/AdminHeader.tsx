@@ -38,10 +38,12 @@ interface AdminHeaderProps {
 const tabTitles: Record<AdminTab, string> = {
   dashboard: 'Dashboard Overview',
   products: 'Product Management',
-  categories: 'Category Management',
-  inventory: 'Inventory & Stock Logs',
   enquiries: 'Customer RFQ Enquiries',
   customers: 'Customer Directory',
+  'website-control': 'Website Control (CMS)',
+  settings: 'System & Platform Settings',
+  categories: 'Category Management',
+  inventory: 'Wholesale Catalog Overview',
   analytics: 'Procurement Analytics',
   'website-content': 'Website Content Management',
   content: 'Website Content Management',
@@ -49,7 +51,6 @@ const tabTitles: Record<AdminTab, string> = {
   faqs: 'FAQs & Knowledge Base',
   services: 'Institutional Services',
   'website-settings': 'Website Control Settings',
-  settings: 'Website Control Settings',
   'rfq-notifications': 'RFQ Notification Settings',
   'admin-profile': 'Administrator Profile & Security',
 };

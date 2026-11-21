@@ -140,7 +140,7 @@ function AppContent() {
   };
 
   const handleAddToCart = (item: Product | CatalogItem) => {
-    const product: Product = 'hsnCode' in item ? item : catalogItemToProduct(item);
+    const product: Product = 'teluguName' in item ? (item as Product) : catalogItemToProduct(item as CatalogItem);
     setCartItems((prev) => {
       const existing = prev.find((entry) => entry.product.id === product.id);
       if (existing) {

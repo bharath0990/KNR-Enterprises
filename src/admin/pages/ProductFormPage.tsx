@@ -49,10 +49,10 @@ export const ProductFormPage: React.FC<ProductFormPageProps> = ({
   const [unit, setUnit] = useState(product?.unit || 'unit');
   const [moqDescription, setMoqDescription] = useState(product?.moqDescription || '');
 
-  // Inventory
-  const [stockQuantity, setStockQuantity] = useState<number>(product?.stockQuantity ?? 100);
-  const [lowStockThreshold, setLowStockThreshold] = useState<number>(product?.lowStockThreshold ?? 10);
-  const [inStock, setInStock] = useState<boolean>(product?.inStock ?? true);
+  // Availability (Wholesale Model - Manual Availability Control)
+  const [availability, setAvailability] = useState<'Available' | 'Enquire for Availability' | 'Discontinued'>(
+    product?.availability || (product?.inStock !== false ? 'Available' : 'Enquire for Availability')
+  );
 
   // Images
   const [image, setImage] = useState(product?.image || '/hero-knr-products.jpg');
@@ -164,9 +164,8 @@ export const ProductFormPage: React.FC<ProductFormPageProps> = ({
         unit: unit.trim(),
         moq: Number(moq),
         moqDescription: moqDescription.trim() || `${moq} ${unit.trim()}`,
-        stockQuantity: Number(stockQuantity),
-        lowStockThreshold: Number(lowStockThreshold),
-        inStock: inStock && stockQuantity > 0,
+        availability,
+        inStock: availability !== 'Discontinued',
         badge: badge.trim(),
         badgeColor: badgeColor,
         image: image,
@@ -485,57 +484,87 @@ export const ProductFormPage: React.FC<ProductFormPageProps> = ({
           </div>
         </div>
 
-        {/* SECTION 3: INVENTORY */}
+        {/* SECTION 3: AVAILABILITY STATUS (Wholesale RFQ Model) */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">
-            3. Inventory &amp; Stock Levels
-          </h3>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+              3. Product Availability Status
+            </h3>
+            <span className="text-[11px] text-slate-400">Wholesale RFQ Model (No Fake Inventory Counts)</span>
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Available Stock Quantity
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={stockQuantity}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10) || 0;
-                  setStockQuantity(val);
-                  if (val === 0) setInStock(false);
-                }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm font-mono text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Low Stock Alert Threshold
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={lowStockThreshold}
-                onChange={(e) => setLowStockThreshold(parseInt(e.target.value, 10) || 0)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm font-mono text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white"
-              />
-            </div>
-
-            <div className="flex items-center gap-3 pt-6">
-              <label className="relative inline-flex items-center cursor-pointer">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Available */}
+            <label
+              className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                availability === 'Available'
+                  ? 'border-emerald-500 bg-emerald-50/50 text-emerald-950 shadow-xs'
+                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100/70 text-slate-700'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-sm text-emerald-800">Available</span>
                 <input
-                  type="checkbox"
-                  checked={inStock}
-                  onChange={(e) => setInStock(e.target.checked)}
-                  className="sr-only peer"
+                  type="radio"
+                  name="availability"
+                  value="Available"
+                  checked={availability === 'Available'}
+                  onChange={() => setAvailability('Available')}
+                  className="accent-emerald-600 w-4 h-4"
                 />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                <span className="ml-3 text-xs font-bold text-slate-800">
-                  {inStock ? 'Marked In Stock' : 'Marked Out of Stock'}
-                </span>
-              </label>
-            </div>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                In Stock &amp; ready for immediate truckload dispatch from Chevella depot.
+              </p>
+            </label>
+
+            {/* Enquire for Availability */}
+            <label
+              className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                availability === 'Enquire for Availability'
+                  ? 'border-amber-500 bg-amber-50/50 text-amber-950 shadow-xs'
+                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100/70 text-slate-700'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-sm text-amber-800">Enquire for Availability</span>
+                <input
+                  type="radio"
+                  name="availability"
+                  value="Enquire for Availability"
+                  checked={availability === 'Enquire for Availability'}
+                  onChange={() => setAvailability('Enquire for Availability')}
+                  className="accent-amber-600 w-4 h-4"
+                />
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Supplied on confirmed purchase order with factory lead time.
+              </p>
+            </label>
+
+            {/* Discontinued */}
+            <label
+              className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                availability === 'Discontinued'
+                  ? 'border-rose-500 bg-rose-50/50 text-rose-950 shadow-xs'
+                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100/70 text-slate-700'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-sm text-rose-800">Discontinued</span>
+                <input
+                  type="radio"
+                  name="availability"
+                  value="Discontinued"
+                  checked={availability === 'Discontinued'}
+                  onChange={() => setAvailability('Discontinued')}
+                  className="accent-rose-600 w-4 h-4"
+                />
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Archived product no longer supplied or manufactured.
+              </p>
+            </label>
           </div>
         </div>
 
