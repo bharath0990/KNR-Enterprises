@@ -137,14 +137,19 @@ async function runLiveVerification() {
   // --------------------------------------------------------------------------
   console.log('\n--- 4. EXECUTING ISOLATED STAGING END-TO-END WORKFLOW ---');
   const stagingRef = `STAGING-TEST-${Date.now()}`;
-  let stagingEnquiryId = null;
+  const stagingEnquiryId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 
   try {
-    // 4.1 Insert Staging Enquiry
-    console.log(`[Step 4.1] Submitting staging RFQ enquiry (${stagingRef})...`);
-    const { data: enqData, error: enqErr } = await supabase
+    // 4.1 Insert Staging Enquiry (Client UUID without .select() to respect anon RLS)
+    console.log(`[Step 4.1] Submitting staging RFQ enquiry (${stagingRef}) with ID ${stagingEnquiryId}...`);
+    const { error: enqErr } = await supabase
       .from('enquiries')
       .insert({
+        id: stagingEnquiryId,
         enquiry_number: stagingRef,
         customer_name: 'Staging Auditor (Govt Testing)',
         mobile_number: '+91 9999999999',
@@ -159,20 +164,22 @@ async function runLiveVerification() {
         estimated_gst: 2700,
         total_amount: 17700,
         source: 'staging_audit_suite',
-      })
-      .select()
-      .single();
+      });
 
     if (enqErr) {
       throw new Error(`Failed to insert staging enquiry: ${enqErr.message}`);
     }
-    stagingEnquiryId = enqData.id;
     console.log(`✓ Staging enquiry recorded with ID: ${stagingEnquiryId}`);
 
     // 4.2 Insert Staging Items
     console.log('[Step 4.2] Inserting staging line items...');
     const { error: itemErr } = await supabase.from('enquiry_items').insert([
       {
+        id: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        }),
         enquiry_id: stagingEnquiryId,
         product_name: 'Commercial Bleaching Powder Grade 1 (33% Chlorine)',
         quantity: 10,
@@ -182,6 +189,11 @@ async function runLiveVerification() {
         total_price: 8500,
       },
       {
+        id: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        }),
         enquiry_id: stagingEnquiryId,
         product_name: 'Heavy-Duty HDPE Wheeled Garbage Bin (240L SBM)',
         quantity: 2,
@@ -262,3 +274,4 @@ async function runLiveVerification() {
 }
 
 runLiveVerification();
+

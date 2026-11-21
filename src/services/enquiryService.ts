@@ -144,8 +144,18 @@ export async function submitRfqEnquiry(
   const randNum = Math.floor(10000 + Math.random() * 90000);
   const enquiryNumber = `KNR-RFQ-${year}-${randNum}`;
 
+  // Generate robust UUID compatible with Postgres UUID primary key
+  const generatedId =
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+
   const newEnquiry: CustomerEnquiry = {
-    id: `enq-${Date.now()}`,
+    id: generatedId,
     enquiryNumber,
     customerName: customerDetails.customerName,
     mobileNumber: customerDetails.mobileNumber,
@@ -176,9 +186,10 @@ export async function submitRfqEnquiry(
 
   if (isSupabaseConfigured()) {
     try {
-      const { data: insertedEnq, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('enquiries')
         .insert({
+          id: generatedId,
           enquiry_number: newEnquiry.enquiryNumber,
           customer_name: newEnquiry.customerName,
           mobile_number: newEnquiry.mobileNumber,
@@ -202,17 +213,14 @@ export async function submitRfqEnquiry(
           estimated_gst: newEnquiry.estimatedGst,
           total_amount: newEnquiry.totalAmount,
           source: newEnquiry.source,
-        })
-        .select()
-        .single();
+        });
 
-      if (!insertError && insertedEnq) {
-        newEnquiry.id = String(insertedEnq.id);
-
+      if (!insertError) {
         // Insert items
         if (items.length > 0) {
           const itemsPayload = items.map((it) => ({
-            enquiry_id: insertedEnq.id,
+            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined,
+            enquiry_id: generatedId,
             product_id: it.productId || null,
             product_name: it.productName,
             quantity: it.quantity,
@@ -224,6 +232,8 @@ export async function submitRfqEnquiry(
 
           await supabase.from('enquiry_items').insert(itemsPayload);
         }
+      } else {
+        console.warn('Failed to insert enquiry to Supabase, saving locally:', insertError);
       }
     } catch (err) {
       console.warn('Failed to insert enquiry to Supabase, saving locally:', err);

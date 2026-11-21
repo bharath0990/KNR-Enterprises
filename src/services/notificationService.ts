@@ -463,25 +463,51 @@ export async function dispatchRfqNotifications(
   const emailData = formatRfqEmail(enquiry, enquiryItems);
   const whatsAppMessage = formatRfqWhatsAppMessage(enquiry, enquiryItems);
 
-  // 1. Dispatch Email Task
+  // 1. Try server-side Supabase Edge Function first
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase.functions.invoke('notify-rfq', {
+        body: { enquiry, items: enquiryItems },
+      });
+
+      if (!error && data) {
+        // Edge function successfully executed server-side
+        const emailSuccess = data.email?.status === 'sent';
+        const wa1Success = data.whatsapp1?.status === 'sent';
+        const wa2Success = data.whatsapp2?.status === 'sent';
+
+        return {
+          emailResult: {
+            success: emailSuccess,
+            recipient: data.email?.recipient || settings.adminEmail,
+            logId: '',
+            error: data.email?.errorMessage || undefined,
+          },
+          whatsapp1Result: {
+            success: wa1Success,
+            recipient: data.whatsapp1?.recipient || settings.whatsappRecipient1,
+            logId: '',
+            error: data.whatsapp1?.errorMessage || undefined,
+          },
+          whatsapp2Result: {
+            success: wa2Success,
+            recipient: data.whatsapp2?.recipient || settings.whatsappRecipient2,
+            logId: '',
+            error: data.whatsapp2?.errorMessage || undefined,
+          },
+          allSucceeded: emailSuccess && wa1Success && wa2Success,
+        };
+      } else if (error) {
+        console.warn('Supabase Edge Function returned error:', error);
+      }
+    } catch (invokeErr) {
+      console.warn('Supabase Edge Function invoke failed:', invokeErr);
+    }
+  }
+
+  // 2. Client-side fallback logging with accurate status
   const emailTask = async () => {
     try {
-      // Simulate/trigger secure SMTP / email dispatch service
-      // (In production, invokes backend email gateway or Supabase Edge Function)
-      const log = await recordNotificationLog({
-        enquiryId: enquiry.id,
-        enquiryNumber: enquiry.enquiryNumber,
-        channel: 'email',
-        recipient: settings.adminEmail,
-        recipientLabel: 'Admin Notification Email',
-        subject: emailData.subject,
-        content: emailData.textBody,
-        status: 'sent',
-        retryCount: 0,
-        lastAttemptAt: new Date().toISOString(),
-      });
-      return { success: true, recipient: settings.adminEmail, logId: log.id };
-    } catch (err: any) {
       const log = await recordNotificationLog({
         enquiryId: enquiry.id,
         enquiryNumber: enquiry.enquiryNumber,
@@ -491,15 +517,16 @@ export async function dispatchRfqNotifications(
         subject: emailData.subject,
         content: emailData.textBody,
         status: 'failed',
-        errorMessage: err?.message || String(err),
+        errorMessage: 'Direct email dispatch pending: RESEND_API_KEY secret is not configured in Supabase.',
         retryCount: 0,
         lastAttemptAt: new Date().toISOString(),
       });
-      return { success: false, recipient: settings.adminEmail, logId: log.id, error: err?.message };
+      return { success: false, recipient: settings.adminEmail, logId: log.id, error: 'Provider credentials not configured' };
+    } catch (err: any) {
+      return { success: false, recipient: settings.adminEmail, logId: '', error: err?.message };
     }
   };
 
-  // 2. Dispatch WhatsApp Recipient 1 (+918886175855)
   const whatsapp1Task = async () => {
     try {
       const recipient = settings.whatsappRecipient1;
@@ -511,31 +538,17 @@ export async function dispatchRfqNotifications(
         recipientLabel: `WhatsApp Recipient 1 (${recipient})`,
         subject: `New Bulk RFQ ${enquiry.enquiryNumber}`,
         content: whatsAppMessage,
-        status: 'sent',
-        retryCount: 0,
-        lastAttemptAt: new Date().toISOString(),
-      });
-      return { success: true, recipient, logId: log.id };
-    } catch (err: any) {
-      const recipient = settings.whatsappRecipient1;
-      const log = await recordNotificationLog({
-        enquiryId: enquiry.id,
-        enquiryNumber: enquiry.enquiryNumber,
-        channel: 'whatsapp',
-        recipient,
-        recipientLabel: `WhatsApp Recipient 1 (${recipient})`,
-        subject: `New Bulk RFQ ${enquiry.enquiryNumber}`,
-        content: whatsAppMessage,
         status: 'failed',
-        errorMessage: err?.message || String(err),
+        errorMessage: 'Direct WhatsApp Cloud dispatch pending: WHATSAPP_API_TOKEN secret is not configured in Supabase.',
         retryCount: 0,
         lastAttemptAt: new Date().toISOString(),
       });
-      return { success: false, recipient, logId: log.id, error: err?.message };
+      return { success: false, recipient, logId: log.id, error: 'Provider credentials not configured' };
+    } catch (err: any) {
+      return { success: false, recipient: settings.whatsappRecipient1, logId: '', error: err?.message };
     }
   };
 
-  // 3. Dispatch WhatsApp Recipient 2 (+919666469679)
   const whatsapp2Task = async () => {
     try {
       const recipient = settings.whatsappRecipient2;
@@ -547,31 +560,17 @@ export async function dispatchRfqNotifications(
         recipientLabel: `WhatsApp Recipient 2 (${recipient})`,
         subject: `New Bulk RFQ ${enquiry.enquiryNumber}`,
         content: whatsAppMessage,
-        status: 'sent',
-        retryCount: 0,
-        lastAttemptAt: new Date().toISOString(),
-      });
-      return { success: true, recipient, logId: log.id };
-    } catch (err: any) {
-      const recipient = settings.whatsappRecipient2;
-      const log = await recordNotificationLog({
-        enquiryId: enquiry.id,
-        enquiryNumber: enquiry.enquiryNumber,
-        channel: 'whatsapp',
-        recipient,
-        recipientLabel: `WhatsApp Recipient 2 (${recipient})`,
-        subject: `New Bulk RFQ ${enquiry.enquiryNumber}`,
-        content: whatsAppMessage,
         status: 'failed',
-        errorMessage: err?.message || String(err),
+        errorMessage: 'Direct WhatsApp Cloud dispatch pending: WHATSAPP_API_TOKEN secret is not configured in Supabase.',
         retryCount: 0,
         lastAttemptAt: new Date().toISOString(),
       });
-      return { success: false, recipient, logId: log.id, error: err?.message };
+      return { success: false, recipient, logId: log.id, error: 'Provider credentials not configured' };
+    } catch (err: any) {
+      return { success: false, recipient: settings.whatsappRecipient2, logId: '', error: err?.message };
     }
   };
 
-  // Run all 3 destinations in parallel without blocking each other
   const [emailRes, wa1Res, wa2Res] = await Promise.allSettled([
     emailTask(),
     whatsapp1Task(),
@@ -594,7 +593,7 @@ export async function dispatchRfqNotifications(
     emailResult,
     whatsapp1Result,
     whatsapp2Result,
-    allSucceeded: emailResult.success && whatsapp1Result.success && whatsapp2Result.success,
+    allSucceeded: false,
   };
 }
 
