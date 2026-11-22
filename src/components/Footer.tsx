@@ -24,6 +24,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, language = 'en' }) =
   const gstin = settings?.gstin || '36CUHPK5939D1ZG';
   const address = settings?.depotAddress || 'H.No: 1-77/6, Near HP Petrol Pump, Chevella, Ranga Reddy District, Telangana – 501503';
 
+  // Contact Person (Harivardhan Reddy)
+  const contactPersonName = settings?.contactPersonName || 'Harivardhan Reddy';
+  const contactPersonPhone = settings?.contactPersonPhone || settings?.phoneSecondary || '+91 9666469679';
+  const contactPersonPhoneClean = contactPersonPhone.replace(/[^0-9+]/g, '');
+  const contactPersonWhatsappDigits = (settings?.contactPersonWhatsapp || contactPersonPhone).replace(/[^0-9]/g, '');
+
   return (
     <footer className="bg-[#0D2B5B] text-slate-300 pt-16 pb-24 md:pb-12 border-t border-slate-700/60 print:hidden selection:bg-[#F57C00]/30 selection:text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -112,13 +118,30 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, language = 'en' }) =
             <ul className="space-y-3 text-xs sm:text-sm text-slate-300">
               <li className="flex items-start gap-2.5">
                 <Phone className="w-4 h-4 text-[#F57C00] shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-0.5">
-                  <a href={`tel:${phone1.replace(/[^0-9+]/g, '')}`} className="hover:text-[#F57C00] transition-colors font-medium">
-                    {phone1} <span className="text-[11px] text-slate-400">(K. Narendar Reddy)</span>
-                  </a>
-                  <a href={`tel:${phone2.replace(/[^0-9+]/g, '')}`} className="hover:text-[#F57C00] transition-colors font-medium">
-                    {phone2} <span className="text-[11px] text-slate-400">(G. Siva)</span>
-                  </a>
+                <div className="flex flex-col gap-1.5">
+                  <div>
+                    <span className="text-[11px] text-orange-300 font-semibold uppercase block">Contact Person:</span>
+                    <div className="flex items-center gap-2">
+                      <a href={`tel:${contactPersonPhoneClean}`} className="hover:text-[#F57C00] transition-colors font-medium">
+                        {contactPersonPhone} <span className="text-[11px] text-slate-300">({contactPersonName})</span>
+                      </a>
+                      <a
+                        href={`https://wa.me/${contactPersonWhatsappDigits}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-1.5 py-0.5 rounded transition-colors"
+                        title={`WhatsApp ${contactPersonName}`}
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-400 font-semibold uppercase block">Managing Partner:</span>
+                    <a href={`tel:${phone1.replace(/[^0-9+]/g, '')}`} className="hover:text-[#F57C00] transition-colors font-medium">
+                      {phone1} <span className="text-[11px] text-slate-400">(K. Narendar Reddy)</span>
+                    </a>
+                  </div>
                 </div>
               </li>
               <li className="flex items-center gap-2.5">

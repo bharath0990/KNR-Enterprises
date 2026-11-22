@@ -296,6 +296,10 @@ export const CategoriesPage: React.FC = () => {
                           <img
                             src={cat.image}
                             alt={cat.name}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src =
+                                'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=80';
+                            }}
                             className="w-10 h-10 rounded-xl object-cover bg-slate-100 border border-slate-200 shrink-0"
                           />
                         ) : (

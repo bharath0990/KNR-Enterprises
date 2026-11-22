@@ -367,6 +367,12 @@ export interface WebsiteSettings {
   maintenanceMode: boolean;
   maintenanceMessage?: string;
   updatedAt?: string;
+  // Contact Person (Harivardhan Reddy)
+  contactPersonName?: string;
+  contactPersonPhone?: string;
+  contactPersonWhatsapp?: string;
+  showContactPerson?: boolean;
+  contactPersonOrder?: number;
 }
 
 export interface HomepageContent {

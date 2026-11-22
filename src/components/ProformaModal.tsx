@@ -95,21 +95,19 @@ export const ProformaModal: React.FC<ProformaModalProps> = ({
       enquiryItems
     ).catch((err) => console.warn('Could not record proforma enquiry in DB:', err));
 
-    let msg = `*KNR ENTERPRISES - PROFORMA ESTIMATE*\n`;
+    let msg = `*KNR ENTERPRISES - PROFORMA REQUISITION*\n`;
     msg += `Ref: ${formData.invoiceNumber} | Date: ${formData.date}\n`;
     msg += `Buyer: ${formData.panchayatName}, ${formData.mandal}\n`;
     msg += `---------------------------------------\n`;
     items.forEach((item, idx) => {
-      msg += `${idx + 1}. ${item.product.name}\n   HSN: ${item.product.hsnCode} | Qty: ${item.quantity} ${item.product.unit} @ ₹${item.product.price}\n`;
+      msg += `${idx + 1}. ${item.product.name}\n   HSN: ${item.product.hsnCode || '3808'} | Qty: ${item.quantity} ${item.product.unit}\n`;
     });
     msg += `---------------------------------------\n`;
-    msg += `Taxable Value: ₹${subtotal.toLocaleString('en-IN')}\n`;
-    msg += `CGST (9%) + SGST (9%): ₹${totalGst.toLocaleString('en-IN')}\n`;
-    msg += `Grand Total: ₹${grandTotal.toLocaleString('en-IN')}\n`;
+    msg += `Pricing: Official Wholesale Quotation on Request\n`;
     msg += `Supplier GSTIN: 36CUHPK5939D1ZG\n`;
-    msg += `Dispatch Contact: K. Narendar Reddy (+91 8886175855)`;
+    msg += `Dispatch Contact: Harivardhan Reddy (+91 9666469679) / K. Narendar Reddy (+91 8886175855)`;
 
-    window.open(`https://wa.me/918886175855?text=${encodeURIComponent(msg)}`, '_blank');
+    window.open(`https://wa.me/919666469679?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   return (
@@ -301,27 +299,21 @@ export const ProformaModal: React.FC<ProformaModalProps> = ({
                 <tr>
                   <th className="py-2.5 px-3 w-10 text-center">#</th>
                   <th className="py-2.5 px-3">Item Description</th>
-                  <th className="py-2.5 px-3 text-center">HSN</th>
-                  <th className="py-2.5 px-3 text-center">Qty</th>
-                  <th className="py-2.5 px-3 text-right">Unit Rate (₹)</th>
-                  <th className="py-2.5 px-3 text-right">Taxable Amt (₹)</th>
-                  <th className="py-2.5 px-3 text-right">GST (18%)</th>
-                  <th className="py-2.5 px-3 text-right">Total (₹)</th>
+                  <th className="py-2.5 px-3 text-center">HSN Code</th>
+                  <th className="py-2.5 px-3 text-center">Indent Qty</th>
+                  <th className="py-2.5 px-3 text-center">Pricing Mode</th>
+                  <th className="py-2.5 px-3 text-right">Tax Terms</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-400">
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
                       No items currently selected in RFQ cart.
                     </td>
                   </tr>
                 ) : (
                   items.map((item, index) => {
-                    const itemTaxable = item.product.price * item.quantity;
-                    const itemGst = Math.round(itemTaxable * 0.18);
-                    const itemTotal = itemTaxable + itemGst;
-
                     return (
                       <tr key={item.product.id} className="hover:bg-slate-50/50">
                         <td className="py-2.5 px-3 text-center font-mono text-slate-500">
@@ -329,25 +321,21 @@ export const ProformaModal: React.FC<ProformaModalProps> = ({
                         </td>
                         <td className="py-2.5 px-3">
                           <p className="font-bold text-slate-900">{item.product.name}</p>
-                          <p className="text-[10px] text-slate-500">{item.product.moqDescription}</p>
+                          <p className="text-[10px] text-slate-500">{item.product.moqDescription || `MOQ: ${item.product.moq} ${item.product.unit}`}</p>
                         </td>
                         <td className="py-2.5 px-3 text-center font-mono text-slate-600">
-                          {item.product.hsnCode}
+                          {item.product.hsnCode || '3808'}
                         </td>
                         <td className="py-2.5 px-3 text-center font-bold text-slate-800">
                           {item.quantity} {item.product.unit}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono">
-                          ₹{item.product.price.toLocaleString('en-IN')}
+                        <td className="py-2.5 px-3 text-center">
+                          <span className="text-[11px] font-bold text-[#F57C00] bg-orange-50 border border-orange-200 px-2 py-0.5 rounded">
+                            Official Quote on Request
+                          </span>
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-semibold">
-                          ₹{itemTaxable.toLocaleString('en-IN')}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-600">
-                          ₹{itemGst.toLocaleString('en-IN')}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
-                          ₹{itemTotal.toLocaleString('en-IN')}
+                        <td className="py-2.5 px-3 text-right font-medium text-slate-700 text-xs">
+                          GST Tax Invoice Provided
                         </td>
                       </tr>
                     );
@@ -376,23 +364,18 @@ export const ProformaModal: React.FC<ProformaModalProps> = ({
               </div>
             </div>
 
-            {/* Total Math */}
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-600">Total Taxable Value (Excl. Tax):</span>
-                <span className="font-bold font-mono text-slate-900">₹{subtotal.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-600">Central GST (CGST @ 9%):</span>
-                <span className="font-mono text-slate-700">₹{cgst.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-600">State GST (SGST @ 9%):</span>
-                <span className="font-mono text-slate-700">₹{sgst.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between py-2 border-t-2 border-slate-900 text-sm font-black text-slate-900">
-                <span>Total Amount Payable (Incl. GST):</span>
-                <span className="text-primary text-base font-mono">₹{grandTotal.toLocaleString('en-IN')}</span>
+            {/* Total Terms */}
+            <div className="p-3.5 bg-orange-50/50 border border-orange-200/80 rounded-xl space-y-2 text-xs">
+              <h5 className="font-bold text-[#111827] uppercase tracking-wider text-[11px]">
+                Wholesale Quotation Protocol
+              </h5>
+              <div className="text-slate-700 space-y-1.5 text-[11px] leading-relaxed">
+                <p>
+                  Final customized unit pricing, slab discounts, GST tax calculations, and highway transport charges are confirmed on the official proforma quotation issued by KNR Enterprises.
+                </p>
+                <p className="font-semibold text-slate-900 pt-1 border-t border-orange-200/60">
+                  Contact Person: <strong className="text-[#F57C00]">Harivardhan Reddy (+91 9666469679)</strong>
+                </p>
               </div>
             </div>
           </div>

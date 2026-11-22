@@ -34,6 +34,13 @@ export const WebsiteSettingsPage: React.FC = () => {
   const [depotAddress, setDepotAddress] = useState('');
   const [operatingHours, setOperatingHours] = useState('');
 
+  // Contact Person Management
+  const [contactPersonName, setContactPersonName] = useState('Harivardhan Reddy');
+  const [contactPersonPhone, setContactPersonPhone] = useState('+91 9666469679');
+  const [contactPersonWhatsapp, setContactPersonWhatsapp] = useState('+91 9666469679');
+  const [showContactPerson, setShowContactPerson] = useState(true);
+  const [contactPersonOrder, setContactPersonOrder] = useState(1);
+
   const [facebookUrl, setFacebookUrl] = useState('');
   const [instagramUrl, setInstagramUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
@@ -63,6 +70,12 @@ export const WebsiteSettingsPage: React.FC = () => {
       setGstin(settings.gstin || '36CUHPK5939D1ZG');
       setDepotAddress(settings.depotAddress || 'H.No: 1-77/6, Near HP Petrol Pump, Mdl & Vill Chevella, Ranga Reddy, Telangana 501503');
       setOperatingHours(settings.operatingHours || 'Mon - Sat: 8:30 AM - 7:30 PM');
+
+      setContactPersonName(settings.contactPersonName || 'Harivardhan Reddy');
+      setContactPersonPhone(settings.contactPersonPhone || settings.phoneSecondary || '+91 9666469679');
+      setContactPersonWhatsapp(settings.contactPersonWhatsapp || settings.contactPersonPhone || '+91 9666469679');
+      setShowContactPerson(settings.showContactPerson ?? true);
+      setContactPersonOrder(settings.contactPersonOrder ?? 1);
 
       setFacebookUrl(settings.facebookUrl || 'https://facebook.com');
       setInstagramUrl(settings.instagramUrl || 'https://instagram.com');
@@ -105,6 +118,11 @@ export const WebsiteSettingsPage: React.FC = () => {
         announcementBannerText: announcementBannerText.trim(),
         maintenanceMode,
         maintenanceMessage: maintenanceMessage.trim(),
+        contactPersonName: contactPersonName.trim(),
+        contactPersonPhone: contactPersonPhone.trim(),
+        contactPersonWhatsapp: contactPersonWhatsapp.trim(),
+        showContactPerson,
+        contactPersonOrder,
       };
 
       await updateSettings(payload);
@@ -399,6 +417,90 @@ export const WebsiteSettingsPage: React.FC = () => {
                 placeholder="Mon - Sat: 8:30 AM - 7:30 PM (Sunday Emergency Dispatch Available)"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white"
               />
+            </div>
+          </div>
+
+          {/* Sub-card: Designated Wholesale Contact Person */}
+          <div className="p-4 bg-orange-50/60 border border-orange-200/80 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between border-b border-orange-200/60 pb-2">
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                  <span>Designated Wholesale Contact Person</span>
+                  <span className="text-[10px] bg-orange-100 text-orange-800 font-semibold px-2 py-0.5 rounded-full uppercase">
+                    Public Contact
+                  </span>
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  Manage primary contact representative displayed on Contact Us, Footer, and mobile dialer buttons
+                </p>
+              </div>
+
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showContactPerson}
+                  onChange={(e) => setShowContactPerson(e.target.checked)}
+                  className="rounded text-orange-600 focus:ring-orange-500 cursor-pointer"
+                />
+                <span>Show on Website</span>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Contact Person Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={contactPersonName}
+                  onChange={(e) => setContactPersonName(e.target.value)}
+                  placeholder="Harivardhan Reddy"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Mobile Number (tel:) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={contactPersonPhone}
+                  onChange={(e) => setContactPersonPhone(e.target.value)}
+                  placeholder="+91 9666469679"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 font-mono text-slate-900 focus:outline-none focus:border-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  WhatsApp Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={contactPersonWhatsapp}
+                  onChange={(e) => setContactPersonWhatsapp(e.target.value)}
+                  placeholder="+91 9666469679"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 font-mono text-slate-900 focus:outline-none focus:border-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Display Order
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={contactPersonOrder}
+                  onChange={(e) => setContactPersonOrder(parseInt(e.target.value, 10) || 1)}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 font-mono text-slate-900 focus:outline-none focus:border-orange-500"
+                />
+              </div>
             </div>
           </div>
 

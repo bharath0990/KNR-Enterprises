@@ -18,7 +18,6 @@ import {
   Info,
 } from 'lucide-react';
 import { getAssetUrl } from '../utils/assets';
-import { formatINR } from '../services/productService';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -50,7 +49,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   ].filter(Boolean);
 
   const isBelowMoq = quantity < product.moq;
-  const indicativeLineTotal = product.price * quantity;
 
   const handleIncrement = () => setQuantity((prev) => prev + 1);
   const handleDecrement = () => {
@@ -186,20 +184,21 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   )}
                 </div>
 
-                {/* Estimated Unit Price Display */}
-                <div className="p-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl space-y-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xs text-[#64748B] font-semibold">Estimated Price:</span>
-                    <span className="text-2xl sm:text-3xl font-black text-[#F57C00] font-mono">
-                      ₹{product.price.toLocaleString('en-IN')}
+                {/* Wholesale Pricing Display */}
+                <div className="p-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[#64748B] font-semibold">Wholesale Pricing:</span>
+                    <span className="text-base sm:text-lg font-bold text-[#F57C00] bg-orange-50 border border-orange-200/80 px-3 py-0.5 rounded-lg">
+                      Request a Formal Quotation
                     </span>
-                    <span className="text-xs text-[#64748B] font-medium">/ {product.unit}</span>
                   </div>
 
-                  <div className="flex items-center gap-2 text-[11px] text-[#64748B]">
+                  <div className="flex items-center gap-3 text-[11px] text-[#64748B] pt-0.5">
                     <span>Depot MOQ: <strong>{product.moq} {product.unit}</strong></span>
                     <span>•</span>
-                    <span>GST Rate: <strong>{product.gstPercent || 18}%</strong></span>
+                    <span>HSN Code: <strong>{product.hsnCode || '3808'}</strong></span>
+                    <span>•</span>
+                    <span>Tax: <strong>GST Invoice Provided</strong></span>
                   </div>
                 </div>
 
@@ -207,7 +206,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-start gap-2.5 text-[11px] text-amber-900 leading-relaxed">
                   <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <span>
-                    <strong>Indicative Pricing Notice:</strong> Prices displayed on this website are indicative estimates. Final prices may vary depending on order quantity, custom specifications, availability, transportation distance, and applicable taxes. A confirmed quotation will be provided by KNR Enterprises.
+                    <strong>Official Wholesale Quotation:</strong> KNR Enterprises provides formal wholesale quotations for institutional, municipal, and commercial procurement. Submit an enquiry to receive negotiated volume pricing, delivery timelines, and tax invoice terms.
                   </span>
                 </div>
 
@@ -334,8 +333,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       <h5 className="font-bold text-xs text-[#111827] line-clamp-1 group-hover:text-[#F57C00]">
                         {rel.name}
                       </h5>
-                      <span className="text-[11px] font-mono font-semibold text-[#F57C00]">
-                        ₹{rel.price.toLocaleString('en-IN')} / {rel.unit}
+                      <span className="text-[11px] font-semibold text-[#F57C00]">
+                        Contact for Pricing
                       </span>
                     </div>
                   </div>

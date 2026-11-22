@@ -47,6 +47,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   );
   const gstAmount = Math.round(subtotal * 0.18);
   const totalAmount = subtotal + gstAmount;
+  const totalItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const whatsappPhone = (settings?.whatsappNumber || '918886175855').replace(/[^0-9]/g, '');
 
@@ -84,15 +85,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     if (refNumber) message += `*Ref: ${refNumber}*\n`;
     message += `=======================================\n`;
     items.forEach((item, index) => {
-      const lineTotal = item.product.price * item.quantity;
-      message += `${index + 1}. *${item.product.name}*\n   Qty: ${item.quantity} ${item.product.unit} @ ₹${item.product.price.toLocaleString('en-IN')} / ${item.product.unit}\n   Line Total: ₹${lineTotal.toLocaleString('en-IN')}\n\n`;
+      message += `${index + 1}. *${item.product.name}*\n   Quantity: ${item.quantity} ${item.product.unit} (MOQ: ${item.product.moq} ${item.product.unit})\n\n`;
     });
     message += `=======================================\n`;
-    message += `Subtotal: ₹${subtotal.toLocaleString('en-IN')}\n`;
-    message += `Estimated GST (18%): ₹${gstAmount.toLocaleString('en-IN')}\n`;
-    message += `*Total Order Amount: ₹${totalAmount.toLocaleString('en-IN')}*\n`;
+    message += `Total Products: ${items.length}\n`;
+    message += `Total Quantity: ${totalItemCount} units\n`;
     message += `=======================================\n`;
-    message += `Please confirm stock availability and dispatch timeline to our location.`;
+    message += `Please share official wholesale proforma quotation, tax invoice details, and dispatch timeline.`;
 
     const encoded = encodeURIComponent(message);
     window.open(`https://wa.me/${whatsappPhone}?text=${encoded}`, '_blank', 'noopener,noreferrer');
@@ -177,8 +176,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                           <h4 className="font-bold text-slate-900 text-xs sm:text-sm truncate">
                             {item.product.name}
                           </h4>
-                          <p className="text-[11px] text-slate-500 font-mono">
-                            ₹{item.product.price.toLocaleString('en-IN')} / {item.product.unit}
+                          <p className="text-[11px] text-slate-500">
+                            Depot MOQ: {item.product.moq} {item.product.unit}
                           </p>
                         </div>
 
@@ -191,7 +190,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         </button>
                       </div>
 
-                      {/* Quantity & Line Total */}
+                      {/* Quantity & Wholesale Status */}
                       <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
                         <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-0.5">
                           <button
@@ -218,8 +217,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         </div>
 
                         <div className="text-right">
-                          <span className="font-mono font-bold text-sm text-slate-900">
-                            ₹{lineTotal.toLocaleString('en-IN')}
+                          <span className="text-xs font-bold text-[#F57C00] bg-orange-50 border border-orange-200/60 px-2 py-0.5 rounded-md">
+                            Quote on Request
                           </span>
                         </div>
                       </div>
@@ -239,25 +238,18 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           {/* Footer Calculations & Action Buttons */}
           {items.length > 0 && (
             <div className="p-5 bg-slate-50 border-t border-slate-200 space-y-3">
-              <div className="space-y-1.5 text-xs text-slate-600">
-                <div className="flex justify-between">
-                  <span>Taxable Subtotal:</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    ₹{subtotal.toLocaleString('en-IN')}
-                  </span>
+              <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5 text-xs text-slate-600">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-slate-700">Enquiry Total:</span>
+                  <span className="font-bold text-slate-900">{totalItemCount} Units ({items.length} Products)</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Estimated GST (18%):</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    ₹{gstAmount.toLocaleString('en-IN')}
-                  </span>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-slate-700">Pricing Mode:</span>
+                  <span className="font-bold text-[#F57C00]">Wholesale Quotation (Offline)</span>
                 </div>
-                <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t border-slate-200">
-                  <span>Estimated Total:</span>
-                  <span className="font-mono text-orange-600">
-                    ₹{totalAmount.toLocaleString('en-IN')}
-                  </span>
-                </div>
+                <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+                  Final negotiated pricing, applicable GST tax invoice, and highway dispatch schedule will be provided in the official quotation.
+                </p>
               </div>
 
               <div className="space-y-2 pt-1">

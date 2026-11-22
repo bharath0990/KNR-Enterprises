@@ -40,6 +40,11 @@ export const DEFAULT_WEBSITE_SETTINGS: WebsiteSettings = {
   announcementBannerText: 'Monsoon Sanitation & Vector Control Supplies in Stock at Chevella Depot. Same-Day Highway Dispatch across Telangana.',
   maintenanceMode: false,
   maintenanceMessage: 'We are currently performing scheduled maintenance. For urgent orders, please call K. Narendar Reddy (+91 8886175855) or G. Siva (+91 9640195798).',
+  contactPersonName: 'Harivardhan Reddy',
+  contactPersonPhone: '+91 9666469679',
+  contactPersonWhatsapp: '+91 9666469679',
+  showContactPerson: true,
+  contactPersonOrder: 1,
 };
 
 export async function fetchWebsiteSettings(): Promise<WebsiteSettings> {
@@ -75,6 +80,11 @@ export async function fetchWebsiteSettings(): Promise<WebsiteSettings> {
           maintenanceMode: data.maintenance_mode,
           maintenanceMessage: data.maintenance_message,
           updatedAt: data.updated_at,
+          contactPersonName: data.contact_person_name || 'Harivardhan Reddy',
+          contactPersonPhone: data.contact_person_phone || data.phone_secondary || '+91 9666469679',
+          contactPersonWhatsapp: data.contact_person_whatsapp || data.contact_person_phone || data.phone_secondary || '+91 9666469679',
+          showContactPerson: data.show_contact_person !== undefined ? Boolean(data.show_contact_person) : true,
+          contactPersonOrder: data.contact_person_order ? Number(data.contact_person_order) : 1,
         };
       }
     } catch (err) {
@@ -118,9 +128,24 @@ export async function updateWebsiteSettings(updates: Partial<WebsiteSettings>): 
         announcement_banner_text: merged.announcementBannerText,
         maintenance_mode: merged.maintenanceMode,
         maintenance_message: merged.maintenanceMessage,
+        contact_person_name: merged.contactPersonName || 'Harivardhan Reddy',
+        contact_person_phone: merged.contactPersonPhone || merged.phoneSecondary || '+91 9666469679',
+        contact_person_whatsapp: merged.contactPersonWhatsapp || merged.contactPersonPhone || '+91 9666469679',
+        show_contact_person: merged.showContactPerson ?? true,
+        contact_person_order: merged.contactPersonOrder ?? 1,
       };
 
-      const { error } = await supabase.from('website_settings').upsert({ id: 'primary', ...dbPayload });
+      let { error } = await supabase.from('website_settings').upsert({ id: 'primary', ...dbPayload });
+      if (error && error.code === 'PGRST204') {
+        // If optional extended columns are not yet in Supabase schema cache, upsert with core columns
+        delete dbPayload.contact_person_name;
+        delete dbPayload.contact_person_phone;
+        delete dbPayload.contact_person_whatsapp;
+        delete dbPayload.show_contact_person;
+        delete dbPayload.contact_person_order;
+        const res = await supabase.from('website_settings').upsert({ id: 'primary', ...dbPayload });
+        error = res.error;
+      }
       if (error) throw new Error(`Supabase error saving website settings: ${error.message}`);
     } catch (err) {
       console.error('Failed to update website settings in Supabase:', err);

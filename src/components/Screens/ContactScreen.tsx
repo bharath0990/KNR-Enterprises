@@ -37,6 +37,13 @@ export const ContactScreen: React.FC<ContactScreenProps> = ({ onNavigate }) => {
   const address = settings?.depotAddress || 'H.No: 1-77/6, Near HP Petrol Pump, Mdl & Vill Chevella, Ranga Reddy, Telangana 501503';
   const whatsappDigits = (settings?.whatsappNumber || '918886175855').replace(/[^0-9]/g, '');
 
+  // Contact Person (Harivardhan Reddy)
+  const contactPersonName = settings?.contactPersonName || 'Harivardhan Reddy';
+  const contactPersonPhone = settings?.contactPersonPhone || settings?.phoneSecondary || '+91 9666469679';
+  const contactPersonPhoneClean = contactPersonPhone.replace(/[^0-9+]/g, '');
+  const contactPersonWhatsappDigits = (settings?.contactPersonWhatsapp || contactPersonPhone).replace(/[^0-9]/g, '');
+  const showContactPerson = settings?.showContactPerson ?? true;
+
   const googleMapsUrl =
     'https://www.google.com/maps/search/?api=1&query=Near+HP+Petrol+Pump+Chevella+Telangana+501503';
 
@@ -105,11 +112,26 @@ export const ContactScreen: React.FC<ContactScreenProps> = ({ onNavigate }) => {
 
   const contactCards = [
     {
-      id: 'call-us',
-      title: 'Call Depot Hotlines',
-      icon: Phone,
-      lines: [`K. Narendar Reddy: ${phone1}`, `G. Siva: ${phone2}`],
+      id: 'contact-person',
+      title: 'Contact Person',
+      icon: Users,
+      lines: [
+        contactPersonName,
+        `Mobile: ${contactPersonPhone}`,
+        'Wholesale Enquiries & Orders'
+      ],
       btnText: 'Call Now',
+      btnIcon: Phone,
+      btnHref: `tel:${contactPersonPhoneClean}`,
+      isExternal: false,
+      whatsappHref: `https://wa.me/${contactPersonWhatsappDigits}?text=Hello%20${encodeURIComponent(contactPersonName)},%20I%20am%20enquiring%20about%20KNR%20Enterprises%20wholesale%20supplies`,
+    },
+    {
+      id: 'call-us',
+      title: 'Depot Management',
+      icon: Phone,
+      lines: [`K. Narendar Reddy: ${phone1}`, `Central Logistics Desk`],
+      btnText: 'Call Depot',
       btnIcon: Phone,
       btnHref: `tel:${phone1.replace(/[^0-9+]/g, '')}`,
       isExternal: false,
@@ -125,25 +147,15 @@ export const ContactScreen: React.FC<ContactScreenProps> = ({ onNavigate }) => {
       isExternal: false,
     },
     {
-      id: 'visit-us',
-      title: 'Visit Central Depot',
-      icon: MapPin,
-      lines: [address],
-      btnText: 'Google Maps Directions',
-      btnIcon: MapPin,
-      btnHref: googleMapsUrl,
-      isExternal: true,
-    },
-    {
       id: 'whatsapp',
       title: 'WhatsApp Dispatch',
       icon: MessageCircle,
       lines: [
-        'Direct procurement and stock availability discussion via WhatsApp.'
+        `Direct WhatsApp: ${contactPersonPhone}`
       ],
       btnText: 'Chat on WhatsApp',
       btnIcon: MessageCircle,
-      btnHref: `https://wa.me/${whatsappDigits}?text=Hello%20KNR%20Enterprises,%20I%20would%20like%20to%20enquire%20about%20your%20products%20and%20supplies`,
+      btnHref: `https://wa.me/${contactPersonWhatsappDigits}?text=Hello%20KNR%20Enterprises,%20I%20would%20like%20to%20enquire%20about%20your%20products%20and%20supplies`,
       isExternal: true,
     },
   ];
@@ -237,15 +249,29 @@ export const ContactScreen: React.FC<ContactScreenProps> = ({ onNavigate }) => {
                   </div>
                 </div>
 
-                <a
-                  href={card.btnHref}
-                  target={card.isExternal ? '_blank' : undefined}
-                  rel={card.isExternal ? 'noopener noreferrer' : undefined}
-                  className="mt-6 w-full bg-[#F57C00] hover:bg-[#E06D00] text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs hover:shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
-                >
-                  <BtnIcon className="w-4 h-4 text-white" />
-                  <span>{card.btnText}</span>
-                </a>
+                <div className="mt-6 space-y-2">
+                  <a
+                    href={card.btnHref}
+                    target={card.isExternal ? '_blank' : undefined}
+                    rel={card.isExternal ? 'noopener noreferrer' : undefined}
+                    className="w-full bg-[#F57C00] hover:bg-[#E06D00] text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs hover:shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
+                  >
+                    <BtnIcon className="w-4 h-4 text-white" />
+                    <span>{card.btnText}</span>
+                  </a>
+
+                  {card.whatsappHref && (
+                    <a
+                      href={card.whatsappHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-4 rounded-xl shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
+                    >
+                      <MessageCircle className="w-4 h-4 text-white" />
+                      <span>WhatsApp {contactPersonName}</span>
+                    </a>
+                  )}
+                </div>
               </div>
             );
           })}

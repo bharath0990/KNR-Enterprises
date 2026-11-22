@@ -215,7 +215,7 @@ export const RfqSubmissionModal: React.FC<RfqSubmissionModalProps> = ({
                     <span>Quotation Basket ({items.length} Products Selected)</span>
                   </span>
                   <span className="text-[#64748B]">
-                    Indicative Est: <strong className="font-mono text-[#111827]">₹{subtotal.toLocaleString('en-IN')}</strong>
+                    Pricing: <strong className="text-[#F57C00] font-bold">Formal Quote</strong>
                   </span>
                 </div>
 
@@ -235,13 +235,13 @@ export const RfqSubmissionModal: React.FC<RfqSubmissionModalProps> = ({
                           <span className="font-bold text-[#111827] block truncate">
                             {it.product.name}
                           </span>
-                          <span className="text-[10px] text-slate-400">
-                            Qty: {it.quantity} {it.product.unit} @ ₹{it.product.price.toLocaleString('en-IN')} / {it.product.unit}
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            Quantity: {it.quantity} {it.product.unit}
                           </span>
                         </div>
                       </div>
-                      <span className="font-mono font-bold text-xs text-[#111827] shrink-0 ml-2">
-                        ₹{(it.product.price * it.quantity).toLocaleString('en-IN')}
+                      <span className="text-xs font-semibold text-[#F57C00] bg-orange-50 border border-orange-200/60 px-2 py-0.5 rounded shrink-0 ml-2">
+                        Contact for Pricing
                       </span>
                     </div>
                   ))}
@@ -250,7 +250,7 @@ export const RfqSubmissionModal: React.FC<RfqSubmissionModalProps> = ({
                 <div className="text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-xl flex items-center gap-2">
                   <Info className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>
-                    Rates shown are indicative estimates. Our depot team will issue an official quotation with quantity discounts and transportation terms.
+                    Official Proforma Quotation: Our depot team will review your requested quantities and issue an official quotation including volume discounts, GST tax invoice, and transportation dispatch terms.
                   </span>
                 </div>
               </div>

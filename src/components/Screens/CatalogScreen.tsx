@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import {
   getCatalogProducts,
-  formatINR,
   CatalogItem,
   fetchProducts,
   catalogItemToProduct,
@@ -110,8 +109,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   const whatsappPhone = (settings?.whatsappNumber || '918886175855').replace(/[^0-9]/g, '');
 
   const handleEnquire = (product: CatalogItem) => {
-    const formattedPrice = `${formatINR(product.price)} ${product.unit}`;
-    const text = `Hello KNR Enterprises,\nI am interested in the following wholesale product:\nProduct: ${product.name}\nPrice: ${formattedPrice}\nPlease share wholesale bulk availability and formal proforma quote.`;
+    const text = `Hello KNR Enterprises,\nI am interested in the following wholesale product:\nProduct: ${product.name}\nPlease share wholesale bulk availability and formal proforma quote.`;
     window.open(
       `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(text)}`,
       '_blank',
@@ -224,13 +222,13 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           </div>
           <div className="space-y-1">
             <h4 className="text-xs sm:text-sm font-bold text-amber-950 flex items-center gap-1.5">
-              <span>Wholesale Indicative Pricing Notice</span>
+              <span>Wholesale Quotation & Pricing Notice</span>
               <span className="text-[10px] font-semibold text-amber-700 bg-amber-200/60 px-2 py-0.5 rounded-full uppercase">
-                B2B Bulk Estimates
+                B2B Bulk Supply
               </span>
             </h4>
             <p className="text-xs text-amber-900/90 leading-relaxed">
-              Prices displayed on this website are indicative estimates. Final prices may vary depending on order quantity, specifications, availability, transportation and applicable taxes. A confirmed quotation will be provided by KNR Enterprises.
+              Official wholesale quotations are issued directly by KNR Enterprises for all institutional, municipal, and commercial procurement. Final rates depend on order volume, customized specifications, depot stock availability, and highway dispatch logistics.
             </p>
           </div>
         </div>
@@ -299,14 +297,14 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                     {product.description}
                   </p>
 
-                  {/* Price */}
+                  {/* Wholesale Pricing */}
                   <div className="mt-3">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                      Estimated Price
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#F57C00] block">
+                      Wholesale Rate
                     </span>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-lg font-black text-[#111827]">
-                        {formatINR(product.price)}
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-xs font-bold text-[#111827] bg-orange-50 border border-orange-200/60 px-2 py-0.5 rounded-md">
+                        Request a Quote
                       </span>
                       <span className="text-xs font-semibold text-[#64748B]">
                         / {product.unit}

@@ -27,7 +27,7 @@ import {
   Eye,
   Tag,
 } from 'lucide-react';
-import { getCatalogProducts, formatINR, CatalogItem, fetchProducts, catalogItemToProduct } from '../../services/productService';
+import { getCatalogProducts, CatalogItem, fetchProducts, catalogItemToProduct } from '../../services/productService';
 import { fetchCategories } from '../../services/categoryService';
 import { fetchTestimonials, fetchFaqs } from '../../services/contentService';
 import { useWebsiteSettings } from '../../context/WebsiteSettingsContext';
@@ -497,14 +497,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       {product.description}
                     </p>
 
-                    {/* Pricing */}
+                    {/* Wholesale Rate CTA */}
                     <div className="mt-3">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                        Estimated Price
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#F57C00] block">
+                        Wholesale Rate
                       </span>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-lg font-black text-[#111827]">
-                          {formatINR(product.price)}
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-xs font-bold text-[#111827] bg-orange-50 border border-orange-200/60 px-2 py-0.5 rounded-md">
+                          Contact for Pricing
                         </span>
                         <span className="text-xs font-semibold text-[#64748B]">
                           / {product.unit}
@@ -896,6 +896,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </h3>
 
               <div className="space-y-4 text-xs sm:text-sm">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#FFF3E0] text-[#F57C00] flex items-center justify-center shrink-0 mt-0.5">
+                    <PhoneCall className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-[#111827]">Designated Contact Person</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <a href={`tel:${(settings?.contactPersonPhone || settings?.phoneSecondary || '+919666469679').replace(/[^0-9+]/g, '')}`} className="text-[#F57C00] font-bold hover:underline">
+                        {settings?.contactPersonPhone || settings?.phoneSecondary || '+91 9666469679'} ({settings?.contactPersonName || 'Harivardhan Reddy'})
+                      </a>
+                      <a
+                        href={`https://wa.me/${(settings?.contactPersonWhatsapp || settings?.contactPersonPhone || '919666469679').replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-0.5 rounded transition-colors"
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-xl bg-[#FFF3E0] text-[#F57C00] flex items-center justify-center shrink-0 mt-0.5">
                     <PhoneCall className="w-4 h-4" />

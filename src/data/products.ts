@@ -835,27 +835,51 @@ export const PRODUCTS: Product[] = [
 
 export const CATEGORIES = [
   {
+    id: 'Disinfectants & Chemicals',
+    name: 'Bleaching Powder & Lime',
+    teluguName: 'బ్లీచింగ్ & లైమ్ పౌడర్',
+    count: 2,
+    image: 'https://wslxpaxwwmgbhpcandld.supabase.co/storage/v1/object/public/knr-products/categories/bleaching-powder-lime.jpg',
+    description: 'Industrial 33% chlorine bleaching powder & 90% hydrated lime sacks'
+  },
+  {
     id: 'Cleaning Chemicals',
     name: 'Cleaning Chemicals',
     teluguName: 'క్లీనింగ్ రసాయనాలు',
     count: 5,
-    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80',
+    image: 'https://wslxpaxwwmgbhpcandld.supabase.co/storage/v1/object/public/knr-products/categories/cleaning-chemicals.jpg',
     description: 'Bleaching Powder, Lime, Deltaphog, Phenyle & Malathion'
+  },
+  {
+    id: 'Pest & Vector Control',
+    name: 'Vector & Mosquito Control',
+    teluguName: 'దోమల & కీటకాల నియంత్రణ',
+    count: 3,
+    image: 'https://wslxpaxwwmgbhpcandld.supabase.co/storage/v1/object/public/knr-products/categories/vector-mosquito-control.jpg',
+    description: 'Malathion 5% DP, pulse thermal foggers & larvicides'
   },
   {
     id: 'Lighting Equipment',
     name: 'Lighting Equipment',
     teluguName: 'లైటింగ్ పరికరాలు',
     count: 1,
-    image: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=600&auto=format&fit=crop&q=80',
+    image: 'https://wslxpaxwwmgbhpcandld.supabase.co/storage/v1/object/public/knr-products/categories/lighting-equipment.jpg',
     description: 'Civic LED Street Lights and municipal illumination fixtures'
+  },
+  {
+    id: 'Municipal Infrastructure',
+    name: 'Civic LED Street Lights',
+    teluguName: 'ఎల్ఈడీ వీధి దీపాలు',
+    count: 1,
+    image: 'https://wslxpaxwwmgbhpcandld.supabase.co/storage/v1/object/public/knr-products/categories/civic-led-street-lights.jpg',
+    description: '60W/120W IP66 die-cast fixtures with surge protectors'
   },
   {
     id: 'Cleaning Tools',
     name: 'Cleaning Tools',
     teluguName: 'క్లీనింగ్ టూల్స్',
     count: 7,
-    image: 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?w=600&auto=format&fit=crop&q=80',
+    image: 'https://wslxpaxwwmgbhpcandld.supabase.co/storage/v1/object/public/knr-products/categories/cleaning-tools.jpg',
     description: 'Bundled brooms, small & large brooms, spiked rakes, sickles, and crowbars'
   },
   {
@@ -863,7 +887,7 @@ export const CATEGORIES = [
     name: 'Safety Equipment',
     teluguName: 'భద్రతా పరికరాలు (PPE)',
     count: 5,
-    image: 'https://images.unsplash.com/photo-1584744982491-665216d95f8b?w=600&auto=format&fit=crop&q=80',
+    image: 'https://wslxpaxwwmgbhpcandld.supabase.co/storage/v1/object/public/knr-products/categories/safety-equipment.jpg',
     description: 'Head caps, safety shoes, protective gloves, reflective jackets, and masks'
   },
   {
@@ -871,47 +895,15 @@ export const CATEGORIES = [
     name: 'Waste Management',
     teluguName: 'మున్సిపల్ చెత్త డబ్బాలు & వాహనాలు',
     count: 4,
-    image: 'https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600&auto=format&fit=crop&q=80',
+    image: 'https://wslxpaxwwmgbhpcandld.supabase.co/storage/v1/object/public/knr-products/categories/waste-management.jpg',
     description: 'Plastic baskets, 120L & 240L dust bins, and garbage tricycles'
-  },
-  {
-    id: 'Disinfectants & Chemicals',
-    name: 'Bleaching Powder & Lime',
-    teluguName: 'బ్లీచింగ్ & లైమ్ పౌడర్',
-    count: 2,
-    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80',
-    description: 'Industrial 33% chlorine & 90% hydrated lime sacks'
-  },
-  {
-    id: 'Pest & Vector Control',
-    name: 'Vector & Mosquito Control',
-    teluguName: 'దోమల & కీటకాల నియంత్రణ',
-    count: 3,
-    image: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-    description: 'Malathion 5% DP, pulse thermal foggers & larvicides'
-  },
-  {
-    id: 'Waste Management',
-    name: 'Commercial Dust Bins',
-    teluguName: 'మున్సిపల్ చెత్త డబ్బాలు',
-    count: 2,
-    image: 'https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600&auto=format&fit=crop&q=80',
-    description: '240L SBM wheeled bins & 100L twin segregation units'
-  },
-  {
-    id: 'Municipal Infrastructure',
-    name: 'Civic LED Street Lights',
-    teluguName: 'ఎల్ఈడీ వీధి దీపాలు',
-    count: 1,
-    image: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=600&auto=format&fit=crop&q=80',
-    description: '60W/120W IP66 die-cast fixtures with surge protectors'
   },
   {
     id: 'Civic Landscaping',
     name: 'Green Mat Turf',
     teluguName: 'ఆర్టిఫిషియల్ గడ్డి & పార్కులు',
     count: 1,
-    image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&auto=format&fit=crop&q=80',
+    image: 'https://wslxpaxwwmgbhpcandld.supabase.co/storage/v1/object/public/knr-products/categories/green-mat-turf.jpg',
     description: '35mm dense UV weather-resistant landscape turf'
   },
   {
@@ -919,7 +911,7 @@ export const CATEGORIES = [
     name: 'Sanitization Tools & PPE',
     teluguName: 'పారిశుద్ధ్య టూల్స్ & PPE',
     count: 3,
-    image: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=600&auto=format&fit=crop&q=80',
+    image: 'https://wslxpaxwwmgbhpcandld.supabase.co/storage/v1/object/public/knr-products/categories/sanitization-tools-ppe.jpg',
     description: 'Battery sprayers, road brooms, gumboots & safety gear'
   }
 ];
