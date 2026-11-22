@@ -120,9 +120,11 @@ export async function updateWebsiteSettings(updates: Partial<WebsiteSettings>): 
         maintenance_message: merged.maintenanceMessage,
       };
 
-      await supabase.from('website_settings').upsert({ id: 'primary', ...dbPayload });
+      const { error } = await supabase.from('website_settings').upsert({ id: 'primary', ...dbPayload });
+      if (error) throw new Error(`Supabase error saving website settings: ${error.message}`);
     } catch (err) {
-      console.warn('Failed to update website settings in Supabase:', err);
+      console.error('Failed to update website settings in Supabase:', err);
+      throw err;
     }
   }
 
@@ -233,9 +235,11 @@ export async function updateHomepageContent(updates: Partial<HomepageContent>): 
         about_image: merged.aboutImage,
       };
 
-      await supabase.from('homepage_content').upsert({ id: 'primary', ...dbPayload });
+      const { error } = await supabase.from('homepage_content').upsert({ id: 'primary', ...dbPayload });
+      if (error) throw new Error(`Supabase error saving homepage content: ${error.message}`);
     } catch (err) {
-      console.warn('Failed to update homepage content in Supabase:', err);
+      console.error('Failed to update homepage content in Supabase:', err);
+      throw err;
     }
   }
 
@@ -344,11 +348,15 @@ export async function createTestimonial(testimonial: Partial<Testimonial>): Prom
         .select()
         .single();
 
-      if (!error && data) {
+      if (error) {
+        throw new Error(`Failed to insert testimonial in Supabase: ${error.message}`);
+      }
+      if (data) {
         newT.id = String(data.id);
       }
     } catch (err) {
-      console.warn('Failed to insert testimonial in Supabase:', err);
+      console.error('Failed to insert testimonial in Supabase:', err);
+      throw err;
     }
   }
 
@@ -373,9 +381,11 @@ export async function updateTestimonial(id: string, updates: Partial<Testimonial
       if (updates.displayOrder !== undefined) dbPayload.display_order = updates.displayOrder;
       if (updates.isActive !== undefined) dbPayload.is_active = updates.isActive;
 
-      await supabase.from('testimonials').update(dbPayload).eq('id', id);
+      const { error } = await supabase.from('testimonials').update(dbPayload).eq('id', id);
+      if (error) throw new Error(`Failed to update testimonial in Supabase: ${error.message}`);
     } catch (err) {
-      console.warn('Failed to update testimonial in Supabase:', err);
+      console.error('Failed to update testimonial in Supabase:', err);
+      throw err;
     }
   }
 
@@ -389,9 +399,11 @@ export async function updateTestimonial(id: string, updates: Partial<Testimonial
 export async function deleteTestimonial(id: string): Promise<boolean> {
   if (isSupabaseConfigured()) {
     try {
-      await supabase.from('testimonials').delete().eq('id', id);
+      const { error } = await supabase.from('testimonials').delete().eq('id', id);
+      if (error) throw new Error(`Failed to delete testimonial from Supabase: ${error.message}`);
     } catch (err) {
-      console.warn('Failed to delete testimonial from Supabase:', err);
+      console.error('Failed to delete testimonial from Supabase:', err);
+      throw err;
     }
   }
 
@@ -498,11 +510,15 @@ export async function createFaq(faq: Partial<FAQ>): Promise<FAQ> {
         .select()
         .single();
 
-      if (!error && data) {
+      if (error) {
+        throw new Error(`Failed to insert FAQ in Supabase: ${error.message}`);
+      }
+      if (data) {
         newF.id = String(data.id);
       }
     } catch (err) {
-      console.warn('Failed to insert FAQ in Supabase:', err);
+      console.error('Failed to insert FAQ in Supabase:', err);
+      throw err;
     }
   }
 
@@ -526,9 +542,11 @@ export async function updateFaq(id: string, updates: Partial<FAQ>): Promise<FAQ>
       if (updates.displayOrder !== undefined) dbPayload.display_order = updates.displayOrder;
       if (updates.isActive !== undefined) dbPayload.is_active = updates.isActive;
 
-      await supabase.from('faqs').update(dbPayload).eq('id', id);
+      const { error } = await supabase.from('faqs').update(dbPayload).eq('id', id);
+      if (error) throw new Error(`Failed to update FAQ in Supabase: ${error.message}`);
     } catch (err) {
-      console.warn('Failed to update FAQ in Supabase:', err);
+      console.error('Failed to update FAQ in Supabase:', err);
+      throw err;
     }
   }
 
@@ -542,9 +560,11 @@ export async function updateFaq(id: string, updates: Partial<FAQ>): Promise<FAQ>
 export async function deleteFaq(id: string): Promise<boolean> {
   if (isSupabaseConfigured()) {
     try {
-      await supabase.from('faqs').delete().eq('id', id);
+      const { error } = await supabase.from('faqs').delete().eq('id', id);
+      if (error) throw new Error(`Failed to delete FAQ from Supabase: ${error.message}`);
     } catch (err) {
-      console.warn('Failed to delete FAQ from Supabase:', err);
+      console.error('Failed to delete FAQ from Supabase:', err);
+      throw err;
     }
   }
 
@@ -692,7 +712,7 @@ export async function createService(service: Partial<ServiceItem>): Promise<Serv
 
   if (isSupabaseConfigured()) {
     try {
-      await supabase.from('services').insert({
+      const { error } = await supabase.from('services').insert({
         id: newS.id,
         title: newS.title,
         telugu_title: newS.teluguTitle,
@@ -704,8 +724,10 @@ export async function createService(service: Partial<ServiceItem>): Promise<Serv
         display_order: newS.displayOrder,
         is_active: newS.isActive,
       });
+      if (error) throw new Error(`Failed to insert service in Supabase: ${error.message}`);
     } catch (err) {
-      console.warn('Failed to insert service in Supabase:', err);
+      console.error('Failed to insert service in Supabase:', err);
+      throw err;
     }
   }
 
@@ -730,9 +752,11 @@ export async function updateService(id: string, updates: Partial<ServiceItem>): 
       if (updates.displayOrder !== undefined) dbPayload.display_order = updates.displayOrder;
       if (updates.isActive !== undefined) dbPayload.is_active = updates.isActive;
 
-      await supabase.from('services').update(dbPayload).eq('id', id);
+      const { error } = await supabase.from('services').update(dbPayload).eq('id', id);
+      if (error) throw new Error(`Failed to update service in Supabase: ${error.message}`);
     } catch (err) {
-      console.warn('Failed to update service in Supabase:', err);
+      console.error('Failed to update service in Supabase:', err);
+      throw err;
     }
   }
 
@@ -746,9 +770,11 @@ export async function updateService(id: string, updates: Partial<ServiceItem>): 
 export async function deleteService(id: string): Promise<boolean> {
   if (isSupabaseConfigured()) {
     try {
-      await supabase.from('services').delete().eq('id', id);
+      const { error } = await supabase.from('services').delete().eq('id', id);
+      if (error) throw new Error(`Failed to delete service from Supabase: ${error.message}`);
     } catch (err) {
-      console.warn('Failed to delete service from Supabase:', err);
+      console.error('Failed to delete service from Supabase:', err);
+      throw err;
     }
   }
 

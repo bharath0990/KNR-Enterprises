@@ -11,10 +11,37 @@ export interface UploadResult {
  * If Supabase is not configured or in local development mode, falls back to a base64 Data URL
  * so administrators can preview and save images without blocking their workflow.
  */
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/svg+xml',
+  'image/gif',
+];
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
 export async function uploadProductImage(
   file: File,
   folder: string = 'catalog'
 ): Promise<UploadResult> {
+  // 1. Client-side File Validation
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return {
+      url: '',
+      path: '',
+      error: `Unsupported file type: "${file.type}". Allowed formats: JPG, PNG, WEBP, SVG, GIF.`,
+    };
+  }
+
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+    return {
+      url: '',
+      path: '',
+      error: `File size (${sizeMb} MB) exceeds maximum allowed limit of 5 MB.`,
+    };
+  }
+
   // Fallback if Supabase is not yet configured
   if (!isSupabaseConfigured()) {
     return new Promise((resolve) => {

@@ -69,22 +69,32 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
       setProducts(getCatalogProducts());
     });
 
-    fetchCategories().then((cats) => {
-      const activeCatNames = cats.filter((c) => c.isActive).map((c) => c.name);
-      setCategories(['All Products', ...activeCatNames]);
-    });
+    const loadCategories = () => {
+      fetchCategories().then((cats) => {
+        const activeCatNames = cats.filter((c) => c.isActive).map((c) => c.name);
+        setCategories(['All Products', ...activeCatNames]);
+      });
+    };
+
+    loadCategories();
+    window.addEventListener('knr_categories_updated', loadCategories);
 
     return () => {
       window.removeEventListener('knr_product_price_updated', handleUpdate);
       window.removeEventListener('knr_products_updated', handleUpdate);
+      window.removeEventListener('knr_categories_updated', loadCategories);
     };
   }, []);
 
   // Filter products by category & search term
   const filteredProducts = useMemo(() => {
     return products.filter((prod) => {
-      if (categoryFilter !== 'All Products' && prod.category !== categoryFilter) {
-        return false;
+      if (categoryFilter !== 'All Products') {
+        const matchesCategory =
+          prod.category === categoryFilter ||
+          (prod as unknown as { categoryId?: string }).categoryId === categoryFilter ||
+          prod.category.toLowerCase() === categoryFilter.toLowerCase();
+        if (!matchesCategory) return false;
       }
       if (searchTerm.trim() !== '') {
         const query = searchTerm.toLowerCase();

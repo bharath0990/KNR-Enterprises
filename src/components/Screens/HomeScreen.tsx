@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Screen, Language, Product, Category } from '../../types';
+import { Screen, Language, Product, Category, Testimonial, FAQ } from '../../types';
 import { getAssetUrl } from '../../utils/assets';
 import {
   ShieldCheck,
@@ -29,10 +29,35 @@ import {
 } from 'lucide-react';
 import { getCatalogProducts, formatINR, CatalogItem, fetchProducts, catalogItemToProduct } from '../../services/productService';
 import { fetchCategories } from '../../services/categoryService';
+import { fetchTestimonials, fetchFaqs } from '../../services/contentService';
 import { useWebsiteSettings } from '../../context/WebsiteSettingsContext';
-import { TESTIMONIALS, FAQS_DATA } from '../../data/products';
+import { TESTIMONIALS as RAW_TESTIMONIALS, FAQS_DATA as RAW_FAQS } from '../../data/products';
 import { submitRfqEnquiry } from '../../services/enquiryService';
 import { ProductDetailModal } from '../ProductDetailModal';
+
+const FALLBACK_TESTIMONIALS: Testimonial[] = RAW_TESTIMONIALS.map((t, idx) => ({
+  id: String(t.id),
+  name: t.name,
+  role: t.role,
+  location: t.location,
+  verifiedBadge: t.verifiedBadge,
+  quote: t.quote,
+  rating: t.rating,
+  avatar: t.avatar,
+  displayOrder: idx + 1,
+  isActive: true,
+}));
+
+const FALLBACK_FAQS: FAQ[] = RAW_FAQS.map((f, idx) => ({
+  id: f.id,
+  category: f.category,
+  question: f.question,
+  questionTelugu: f.questionTelugu,
+  answer: f.answer,
+  tags: f.tags,
+  displayOrder: idx + 1,
+  isActive: true,
+}));
 
 interface HomeScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -52,6 +77,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const { homepageContent, settings } = useWebsiteSettings();
   const [products, setProducts] = useState<CatalogItem[]>(() => getCatalogProducts());
   const [categories, setCategories] = useState<Category[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [selectedCatFilter, setSelectedCatFilter] = useState<string>('All');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [selectedProductForDetail, setSelectedProductForDetail] = useState<Product | null>(null);
@@ -73,18 +100,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     window.addEventListener('knr_product_price_updated', handlePriceUpdate);
     window.addEventListener('knr_products_updated', handlePriceUpdate);
 
-    // Synchronize live with remote Supabase database
+    // Synchronize live products with remote Supabase database
     fetchProducts({ activeOnly: true }).then(() => {
       setProducts(getCatalogProducts());
     });
 
-    fetchCategories().then((cats) => {
-      setCategories(cats.filter((c) => c.isActive));
-    });
+    const loadCmsContent = () => {
+      fetchCategories().then((cats) => {
+        setCategories(cats.filter((c) => c.isActive));
+      });
+      fetchTestimonials({ activeOnly: true }).then((data) => {
+        if (data && data.length > 0) setTestimonials(data);
+        else setTestimonials(FALLBACK_TESTIMONIALS);
+      });
+      fetchFaqs({ activeOnly: true }).then((data) => {
+        if (data && data.length > 0) setFaqs(data);
+        else setFaqs(FALLBACK_FAQS);
+      });
+    };
+
+    loadCmsContent();
+    window.addEventListener('knr_categories_updated', loadCmsContent);
+    window.addEventListener('knr_content_updated', loadCmsContent);
 
     return () => {
       window.removeEventListener('knr_product_price_updated', handlePriceUpdate);
       window.removeEventListener('knr_products_updated', handlePriceUpdate);
+      window.removeEventListener('knr_categories_updated', loadCmsContent);
+      window.removeEventListener('knr_content_updated', loadCmsContent);
     };
   }, []);
 
@@ -371,7 +414,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* =========================================================================
           4. PRODUCT CATALOG SHOWCASE ("Explore Our Product Range")
          ========================================================================= */}
-      {(homepageContent?.showFeaturedProducts ?? true) && (
+      {(homepageContent?.showCategories ?? true) && (
         <section className="bg-[#F8FAFC] py-16 sm:py-24 border-b border-[#E2E8F0]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12 space-y-2">
@@ -388,7 +431,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
             {/* Category Filter Tabs */}
             <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
-              {['All', 'Cleaning Chemicals', 'Lighting Equipment', 'Cleaning Tools', 'Safety Equipment', 'Waste Management'].map((catLabel) => {
+              {['All', ...categories.filter((c) => c.isActive).map((c) => c.name)].map((catLabel) => {
                 const isSelected = selectedCatFilter === catLabel;
                 return (
                   <button
@@ -705,124 +748,128 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* =========================================================================
           7. TESTIMONIALS AND TRUST
          ========================================================================= */}
-      <section className="bg-[#F8FAFC] py-16 sm:py-24 border-b border-[#E2E8F0]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-12 space-y-2">
-            <div className="text-[#F57C00] font-bold text-xs uppercase tracking-wider">
-              CLIENT TESTIMONIALS
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight font-display">
-              Trusted by Local Government & Contractors
-            </h2>
-            <p className="text-[#64748B] text-sm">
-              Authentic feedback from Panchayat Sarpanches, Municipal Inspectors and EPC partners.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t) => (
-              <div
-                key={t.id}
-                className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-xs flex flex-col justify-between"
-              >
-                <div>
-                  {/* Rating Stars */}
-                  <div className="flex items-center gap-1 text-amber-500 mb-3">
-                    {[...Array(t.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-500 text-amber-500" />
-                    ))}
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-[#111827] italic leading-relaxed">
-                    "{t.quote}"
-                  </p>
-                </div>
-
-                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-                  <div>
-                    <h5 className="font-bold text-xs text-[#111827]">{t.name}</h5>
-                    <p className="text-[11px] text-[#64748B]">{t.role}</p>
-                    <p className="text-[10px] text-[#F57C00] font-semibold">{t.location}</p>
-                  </div>
-                  <span className="text-[10px] font-bold bg-[#FFF3E0] text-[#F57C00] px-2 py-0.5 rounded-md">
-                    {t.verifiedBadge}
-                  </span>
-                </div>
+      {(homepageContent?.showTestimonials ?? true) && (
+        <section className="bg-[#F8FAFC] py-16 sm:py-24 border-b border-[#E2E8F0]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-2xl mx-auto mb-12 space-y-2">
+              <div className="text-[#F57C00] font-bold text-xs uppercase tracking-wider">
+                CLIENT TESTIMONIALS
               </div>
-            ))}
+              <h2 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight font-display">
+                Trusted by Local Government &amp; Contractors
+              </h2>
+              <p className="text-[#64748B] text-sm">
+                Authentic feedback from Panchayat Sarpanches, Municipal Inspectors and EPC partners.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {(testimonials.length > 0 ? testimonials : FALLBACK_TESTIMONIALS).map((t) => (
+                <div
+                  key={t.id}
+                  className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-xs flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Rating Stars */}
+                    <div className="flex items-center gap-1 text-amber-500 mb-3">
+                      {[...Array(t.rating || 5)].map((_, i) => (
+                        <Star key={i} className="w-4 h-4 fill-amber-500 text-amber-500" />
+                      ))}
+                    </div>
+
+                    <p className="text-xs sm:text-sm text-[#111827] italic leading-relaxed">
+                      "{t.quote}"
+                    </p>
+                  </div>
+
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <h5 className="font-bold text-xs text-[#111827]">{t.name}</h5>
+                      <p className="text-[11px] text-[#64748B]">{t.role}</p>
+                      <p className="text-[10px] text-[#F57C00] font-semibold">{t.location}</p>
+                    </div>
+                    <span className="text-[10px] font-bold bg-[#FFF3E0] text-[#F57C00] px-2 py-0.5 rounded-md">
+                      {t.verifiedBadge}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* =========================================================================
           8. FAQ SECTION (Accordion)
          ========================================================================= */}
-      <section className="bg-white py-16 sm:py-24 border-b border-[#E2E8F0]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 space-y-2">
-            <div className="text-[#F57C00] font-bold text-xs uppercase tracking-wider">
-              HELP & COMPLIANCE
+      {(homepageContent?.showFaqSection ?? true) && (
+        <section className="bg-white py-16 sm:py-24 border-b border-[#E2E8F0]">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12 space-y-2">
+              <div className="text-[#F57C00] font-bold text-xs uppercase tracking-wider">
+                HELP &amp; COMPLIANCE
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight font-display">
+                Frequently Asked Questions
+              </h2>
+              <p className="text-[#64748B] text-sm">
+                Everything you need to know about bulk wholesale orders, GST billing, and highway delivery.
+              </p>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight font-display">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-[#64748B] text-sm">
-              Everything you need to know about bulk wholesale orders, GST billing, and highway delivery.
-            </p>
-          </div>
 
-          <div className="space-y-3">
-            {FAQS_DATA.map((faq, idx) => {
-              const isOpen = openFaqIndex === idx;
-              return (
-                <div
-                  key={faq.id}
-                  className="rounded-2xl border border-[#E2E8F0] overflow-hidden transition-all bg-white"
-                >
-                  <button
-                    onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                    className="w-full text-left p-5 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50 transition-colors"
+            <div className="space-y-3">
+              {(faqs.length > 0 ? faqs : FALLBACK_FAQS).map((faq, idx) => {
+                const isOpen = openFaqIndex === idx;
+                return (
+                  <div
+                    key={faq.id}
+                    className="rounded-2xl border border-[#E2E8F0] overflow-hidden transition-all bg-white"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-[#FFF3E0] text-[#F57C00] shrink-0 font-mono">
-                        {faq.category}
-                      </span>
-                      <span className="font-bold text-sm sm:text-base text-[#111827]">
-                        {faq.question}
-                      </span>
-                    </div>
-                    {isOpen ? (
-                      <ChevronUp className="w-5 h-5 text-[#F57C00] shrink-0" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />
-                    )}
-                  </button>
-
-                  {isOpen && (
-                    <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-[#64748B] leading-relaxed border-t border-slate-100 bg-[#F8FAFC]">
-                      <p>{faq.answer}</p>
-                      {faq.questionTelugu && (
-                        <p className="text-[#111827] font-medium mt-2 pt-2 border-t border-slate-200/60 text-xs">
-                          {faq.questionTelugu}
-                        </p>
+                    <button
+                      onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                      className="w-full text-left p-5 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-[#FFF3E0] text-[#F57C00] shrink-0 font-mono">
+                          {faq.category}
+                        </span>
+                        <span className="font-bold text-sm sm:text-base text-[#111827]">
+                          {faq.question}
+                        </span>
+                      </div>
+                      {isOpen ? (
+                        <ChevronUp className="w-5 h-5 text-[#F57C00] shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />
                       )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                    </button>
 
-          <div className="text-center mt-8">
-            <button
-              onClick={() => onNavigate('faqs')}
-              className="text-xs font-bold text-[#F57C00] hover:underline"
-            >
-              View All Frequently Asked Questions & Compliance Details →
-            </button>
+                    {isOpen && (
+                      <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-[#64748B] leading-relaxed border-t border-slate-100 bg-[#F8FAFC]">
+                        <p>{faq.answer}</p>
+                        {faq.questionTelugu && (
+                          <p className="text-[#111827] font-medium mt-2 pt-2 border-t border-slate-200/60 text-xs">
+                            {faq.questionTelugu}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="text-center mt-8">
+              <button
+                onClick={() => onNavigate('faqs')}
+                className="text-xs font-bold text-[#F57C00] hover:underline"
+              >
+                View all FAQs &amp; procurement guidelines &rarr;
+              </button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* =========================================================================
           9. CONTACT AND DEPOT SECTION ("Let's Discuss Your Supply Requirements")

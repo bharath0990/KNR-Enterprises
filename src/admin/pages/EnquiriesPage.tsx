@@ -537,11 +537,9 @@ export const EnquiriesPage: React.FC<EnquiriesPageProps> = ({ initialSelectedEnq
                       Enquiry #{selectedEnquiry.enquiryNumber}
                     </h3>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                        statusColorMap[selectedEnquiry.status]?.bg || 'bg-slate-100'
-                      } ${statusColorMap[selectedEnquiry.status]?.text || 'text-slate-800'} ${
-                        statusColorMap[selectedEnquiry.status]?.border || 'border-slate-200'
-                      }`}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusColorMap[selectedEnquiry.status]?.bg || 'bg-slate-100'
+                        } ${statusColorMap[selectedEnquiry.status]?.text || 'text-slate-800'} ${statusColorMap[selectedEnquiry.status]?.border || 'border-slate-200'
+                        }`}
                     >
                       {selectedEnquiry.status}
                     </span>

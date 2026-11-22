@@ -1,4 +1,4 @@
-import { Category } from '../types';
+import { Category, Product } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { CATEGORIES as DEFAULT_CATEGORIES } from '../data/products';
 
@@ -61,22 +61,45 @@ export async function fetchCategories(): Promise<Category[]> {
 
       if (error) throw error;
       if (data) {
-        // Also fetch product counts for each category
-        const { data: prodData } = await supabase
+        // Fetch active products to compute real, synchronized assigned product counts
+        const { data: prodData, error: prodErr } = await supabase
           .from('products')
-          .select('category');
+          .select('id, category, category_id, is_active');
+
+        if (prodErr) {
+          console.warn('Could not query products for category counts:', prodErr);
+        }
 
         const counts: Record<string, number> = {};
-        if (prodData) {
+        // Initialize counts to 0 for all categories
+        data.forEach((row) => {
+          counts[String(row.id)] = 0;
+        });
+
+        if (prodData && prodData.length > 0) {
           prodData.forEach((p) => {
-            const cat = String(p.category || '');
-            counts[cat] = (counts[cat] || 0) + 1;
+            if (p.is_active === false) return; // count only active products
+            const prodCatId = String(p.category_id || '');
+            const prodCatName = String(p.category || '');
+
+            // Find matching category by ID or Name
+            const matched = data.find(
+              (c) =>
+                c.id === prodCatId ||
+                c.id === prodCatName ||
+                c.name.toLowerCase() === prodCatName.toLowerCase() ||
+                (c.name && prodCatId && c.name.toLowerCase() === prodCatId.toLowerCase())
+            );
+
+            if (matched) {
+              counts[matched.id] = (counts[matched.id] || 0) + 1;
+            }
           });
         }
 
         const mapped = data.map((row) => {
           const cat = mapDbCategory(row);
-          cat.count = counts[cat.name] || counts[cat.id] || 0;
+          cat.count = counts[cat.id] || 0;
           return cat;
         });
 
@@ -95,43 +118,90 @@ export async function fetchCategories(): Promise<Category[]> {
   return getInitialLocalCategories();
 }
 
+/**
+ * Fetch all active products assigned to a specific category
+ */
+export async function fetchProductsByCategory(categoryId: string, categoryName?: string): Promise<Partial<Product>[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data: catRow } = await supabase
+        .from('categories')
+        .select('name')
+        .eq('id', categoryId)
+        .maybeSingle();
+
+      const nameToMatch = categoryName || catRow?.name || categoryId;
+
+      let query = supabase
+        .from('products')
+        .select('id, name, telugu_name, category, category_id, sku, price, in_stock, is_active, image')
+        .or(`category_id.eq."${categoryId}",category.eq."${nameToMatch}",category.eq."${categoryId}"`)
+        .order('name');
+
+      const { data, error } = await query;
+      if (error) throw error;
+      if (data) {
+        return data.map((p) => ({
+          id: p.id,
+          name: p.name,
+          teluguName: p.telugu_name,
+          category: p.category,
+          categoryId: p.category_id,
+          sku: p.sku,
+          price: Number(p.price || 0),
+          inStock: p.in_stock,
+          isActive: p.is_active,
+          image: p.image,
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch products for category:', err);
+    }
+  }
+  return [];
+}
+
 export async function createCategory(cat: Omit<Category, 'id'> & { id?: string }): Promise<Category> {
-  const slug = cat.id || cat.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const slug =
+    cat.id ||
+    cat.name
+      .trim()
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
   const newCat: Category = {
     id: slug,
-    name: cat.name,
-    teluguName: cat.teluguName || '',
-    description: cat.description || '',
-    image: cat.image || '',
-    displayOrder: cat.displayOrder || 1,
+    name: cat.name.trim(),
+    teluguName: cat.teluguName?.trim() || cat.name.trim(),
+    description: cat.description?.trim() || '',
+    image: cat.image?.trim() || '',
+    displayOrder: Number(cat.displayOrder) || 1,
     isActive: cat.isActive ?? true,
     createdAt: new Date().toISOString(),
+    count: 0,
   };
 
   if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .insert({
-          id: newCat.id,
-          name: newCat.name,
-          telugu_name: newCat.teluguName,
-          description: newCat.description,
-          image: newCat.image,
-          display_order: newCat.displayOrder,
-          is_active: newCat.isActive,
-        })
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({
+        id: newCat.id,
+        name: newCat.name,
+        telugu_name: newCat.teluguName,
+        description: newCat.description,
+        image: newCat.image,
+        display_order: newCat.displayOrder,
+        is_active: newCat.isActive,
+      })
+      .select()
+      .single();
 
-      if (error) {
-        throw new Error(error.message);
-      }
-      if (data) {
-        return mapDbCategory(data);
-      }
-    } catch (err) {
-      console.warn('Failed to insert category in Supabase, saving locally:', err);
+    if (error) {
+      throw new Error(`Failed to create category: ${error.message}`);
+    }
+    if (data) {
+      window.dispatchEvent(new CustomEvent('knr_categories_updated'));
+      return { ...mapDbCategory(data), count: 0 };
     }
   }
 
@@ -145,26 +215,27 @@ export async function createCategory(cat: Omit<Category, 'id'> & { id?: string }
 
 export async function updateCategory(id: string, updates: Partial<Category>): Promise<Category> {
   if (isSupabaseConfigured()) {
-    try {
-      const payload: Record<string, unknown> = {};
-      if (updates.name !== undefined) payload.name = updates.name;
-      if (updates.teluguName !== undefined) payload.telugu_name = updates.teluguName;
-      if (updates.description !== undefined) payload.description = updates.description;
-      if (updates.image !== undefined) payload.image = updates.image;
-      if (updates.displayOrder !== undefined) payload.display_order = updates.displayOrder;
-      if (updates.isActive !== undefined) payload.is_active = updates.isActive;
+    const payload: Record<string, unknown> = {};
+    if (updates.name !== undefined) payload.name = updates.name.trim();
+    if (updates.teluguName !== undefined) payload.telugu_name = updates.teluguName.trim();
+    if (updates.description !== undefined) payload.description = updates.description.trim();
+    if (updates.image !== undefined) payload.image = updates.image.trim();
+    if (updates.displayOrder !== undefined) payload.display_order = Number(updates.displayOrder);
+    if (updates.isActive !== undefined) payload.is_active = updates.isActive;
 
-      const { data, error } = await supabase
-        .from('categories')
-        .update(payload)
-        .eq('id', id)
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('categories')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
 
-      if (error) throw new Error(error.message);
-      if (data) return mapDbCategory(data);
-    } catch (err) {
-      console.warn('Failed to update category in Supabase, updating locally:', err);
+    if (error) {
+      throw new Error(`Failed to update category: ${error.message}`);
+    }
+    if (data) {
+      window.dispatchEvent(new CustomEvent('knr_categories_updated'));
+      return mapDbCategory(data);
     }
   }
 
@@ -175,19 +246,57 @@ export async function updateCategory(id: string, updates: Partial<Category>): Pr
   return updated.find((c) => c.id === id)!;
 }
 
+/**
+ * Sequential reordering of categories (1, 2, 3...)
+ */
+export async function reorderCategories(orderedIds: string[]): Promise<boolean> {
+  if (isSupabaseConfigured()) {
+    try {
+      const updates = orderedIds.map((id, index) =>
+        supabase
+          .from('categories')
+          .update({ display_order: index + 1 })
+          .eq('id', id)
+      );
+      await Promise.all(updates);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Failed to reorder categories: ${msg}`);
+    }
+  }
+
+  const current = getInitialLocalCategories();
+  const updated = current.map((c) => {
+    const idx = orderedIds.indexOf(c.id);
+    return idx !== -1 ? { ...c, displayOrder: idx + 1 } : c;
+  });
+  updated.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+  localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(updated));
+  window.dispatchEvent(new CustomEvent('knr_categories_updated'));
+  return true;
+}
+
 export async function deleteCategory(id: string): Promise<{ success: boolean; error?: string }> {
   if (isSupabaseConfigured()) {
     try {
-      // Check if products exist in this category
+      // Check if products exist in this category (check both category_id and category name)
+      const { data: catRow } = await supabase
+        .from('categories')
+        .select('name')
+        .eq('id', id)
+        .maybeSingle();
+
+      const catName = catRow?.name || id;
+
       const { count } = await supabase
         .from('products')
         .select('id', { count: 'exact', head: true })
-        .eq('category_id', id);
+        .or(`category_id.eq."${id}",category.eq."${catName}",category.eq."${id}"`);
 
       if (count && count > 0) {
         return {
           success: false,
-          error: `Cannot delete: ${count} product(s) are currently assigned to this category. Please reassign them first.`,
+          error: `Cannot delete: ${count} product(s) are currently assigned to this category. Please reassign the products first or archive the category.`,
         };
       }
 
@@ -205,4 +314,3 @@ export async function deleteCategory(id: string): Promise<{ success: boolean; er
   window.dispatchEvent(new CustomEvent('knr_categories_updated'));
   return { success: true };
 }
-

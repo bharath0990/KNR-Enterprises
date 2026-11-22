@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { Screen, Language } from '../../types';
-import { FAQS_DATA } from '../../data/products';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Screen, Language, FAQ } from '../../types';
+import { FAQS_DATA as DEFAULT_FAQS } from '../../data/products';
+import { fetchFaqs } from '../../services/contentService';
 import { TRANSLATIONS } from '../../data/translations';
 import {
   Search,
@@ -22,19 +23,47 @@ interface FaqsScreenProps {
   language: Language;
 }
 
+const FALLBACK_FAQS: FAQ[] = DEFAULT_FAQS.map((f, idx) => ({
+  id: f.id,
+  category: f.category,
+  question: f.question,
+  questionTelugu: f.questionTelugu,
+  answer: f.answer,
+  tags: f.tags,
+  displayOrder: idx + 1,
+  isActive: true,
+}));
+
 export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) => {
   const t = TRANSLATIONS[language];
+  const [faqs, setFaqs] = useState<FAQ[]>(FALLBACK_FAQS);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [openIds, setOpenIds] = useState<string[]>(['faq-1']);
 
-  const categories = [
-    'All',
-    'Bulk Orders & MOQ',
-    'Tenders & Billing',
-    'Delivery & Logistics',
-    'Payments & Support',
-  ];
+  useEffect(() => {
+    const loadFaqs = () => {
+      fetchFaqs({ activeOnly: true }).then((data) => {
+        if (data && data.length > 0) {
+          setFaqs(data);
+        }
+      });
+    };
+
+    loadFaqs();
+    window.addEventListener('knr_content_updated', loadFaqs);
+    return () => window.removeEventListener('knr_content_updated', loadFaqs);
+  }, []);
+
+  const categories = useMemo(() => {
+    const dynamicCats = Array.from(new Set(faqs.map((f) => f.category).filter(Boolean)));
+    return ['All', ...(dynamicCats.length > 0 ? dynamicCats : [
+      'Bulk Orders & MOQ',
+      'Tenders & Billing',
+      'Delivery & Logistics',
+      'Payments & Support',
+    ])];
+  }, [faqs]);
 
   const toggleAccordion = (id: string) => {
     if (openIds.includes(id)) {
@@ -45,7 +74,7 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
   };
 
   const filteredFaqs = useMemo(() => {
-    return FAQS_DATA.filter((faq) => {
+    return faqs.filter((faq) => {
       if (activeCategory !== 'All' && faq.category !== activeCategory) {
         return false;
       }
@@ -60,7 +89,7 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
       }
       return true;
     });
-  }, [activeCategory, searchQuery]);
+  }, [faqs, activeCategory, searchQuery]);
 
   return (
     <div className="w-full bg-[#F8FAFC] text-[#111827] space-y-12 pb-20 selection:bg-[#F57C00]/20 selection:text-[#F57C00]">
@@ -112,8 +141,8 @@ export const FaqsScreen: React.FC<FaqsScreenProps> = ({ onNavigate, language }) 
                 const isSelected = activeCategory === cat;
                 const count =
                   cat === 'All'
-                    ? FAQS_DATA.length
-                    : FAQS_DATA.filter((f) => f.category === cat).length;
+                    ? faqs.length
+                    : faqs.filter((f) => f.category === cat).length;
 
                 return (
                   <button

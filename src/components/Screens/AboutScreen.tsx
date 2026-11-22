@@ -1,6 +1,7 @@
 import React from 'react';
 import { Screen, Language } from '../../types';
 import { getAssetUrl } from '../../utils/assets';
+import { useWebsiteSettings } from '../../context/WebsiteSettingsContext';
 import {
   Home,
   Award,
@@ -22,6 +23,21 @@ interface AboutScreenProps {
 }
 
 export const AboutScreen: React.FC<AboutScreenProps> = ({ onNavigate, language = 'en' }) => {
+  const { homepageContent } = useWebsiteSettings();
+
+  const aboutImageUrl =
+    homepageContent?.aboutImage && homepageContent.aboutImage.trim() !== ''
+      ? homepageContent.aboutImage.startsWith('http') || homepageContent.aboutImage.startsWith('data:')
+        ? homepageContent.aboutImage
+        : getAssetUrl(homepageContent.aboutImage)
+      : getAssetUrl('/about-hero-building.jpg');
+
+  const aboutSectionHeading =
+    homepageContent?.aboutHeading?.trim() || "Dedicated Wholesale Supply for Telangana's Civic Infrastructure";
+
+  const aboutSectionDesc =
+    homepageContent?.aboutDescription?.trim() ||
+    'At KNR Enterprises, we are committed to supplying high-quality municipal, sanitation and industrial products. We work directly with Gram Panchayats, Municipal Corporations, and infrastructure EPC contractors to deliver dependable bulk products and end-to-end procurement support.';
 
   const values = [
     {
@@ -95,7 +111,7 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ onNavigate, language =
             <div className="lg:col-span-5 relative flex items-center justify-center lg:justify-end">
               <div className="relative w-full max-w-md lg:max-w-lg rounded-3xl overflow-hidden shadow-xl border border-[#E2E8F0] bg-white p-3 group">
                 <img
-                  src={getAssetUrl('/about-hero-building.jpg')}
+                  src={aboutImageUrl}
                   alt="KNR Enterprises Commercial Facility"
                   className="w-full h-auto aspect-[16/10] object-cover rounded-2xl transition-transform duration-700 group-hover:scale-105"
                   onError={(e) => {
@@ -124,11 +140,11 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ onNavigate, language =
               </div>
 
               <h2 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight font-display">
-                Dedicated Wholesale Supply for Telangana's Civic Infrastructure
+                {aboutSectionHeading}
               </h2>
 
               <p className="text-[#64748B] text-sm sm:text-base leading-relaxed">
-                At KNR Enterprises, we are committed to supplying high-quality municipal, sanitation and industrial products. We work directly with Gram Panchayats, Municipal Corporations, and infrastructure EPC contractors to deliver dependable bulk products and end-to-end procurement support.
+                {aboutSectionDesc}
               </p>
 
               <p className="text-[#64748B] text-sm sm:text-base leading-relaxed">

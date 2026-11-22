@@ -50,9 +50,11 @@ async function runAudit() {
   console.log('===============================================================\n');
 
   console.log('[AUTH] Authenticating administrator session with Supabase Auth...');
+  const adminEmail = process.env.ADMIN_EMAIL || 'anishreddy057@gmail.com';
+  const adminPassword = process.env.ADMIN_PASSWORD || '';
   const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
-    email: 'anishreddy057@gmail.com',
-    password: '@AnishReddy0990',
+    email: adminEmail,
+    password: adminPassword,
   });
 
   if (authErr || !authData.user) {

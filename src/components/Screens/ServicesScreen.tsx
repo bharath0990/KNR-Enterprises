@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Screen, Language } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { Screen, Language, ServiceItem } from '../../types';
 import { TRANSLATIONS } from '../../data/translations';
+import { fetchServices } from '../../services/contentService';
 import {
   Truck,
   ShieldAlert,
@@ -19,6 +20,85 @@ import {
   Home
 } from 'lucide-react';
 
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Truck,
+  ShieldAlert,
+  Zap,
+  FileCheck2,
+  Building,
+  Clock,
+  Sparkles,
+  Layers,
+  FileText,
+};
+
+const DEFAULT_SERVICES: ServiceItem[] = [
+  {
+    id: 'swachh-bharat',
+    icon: 'Truck',
+    title: 'Gram Panchayat Swachh Bharat Bulk Fulfillment',
+    teluguTitle: 'గ్రామ పంచాయతీ స్వచ్ఛ భారత్ బల్క్ సరఫరా',
+    sla: '24-48 Hr Statewide Dispatch',
+    description: 'Dedicated supply pipeline for village sanitation drives, public health drains, and Swachh Telangana initiatives. We furnish tested Grade 1 bleaching powder (33% Cl), hydrated lime, and 240L SBM wheeled waste bins directly to Mandal headquarters and Gram Panchayat bhavans.',
+    features: [
+      'Guaranteed minimum 33% available chlorine in factory-sealed bags',
+      'Direct tractor/pickup truck unloading assistance',
+      'Formal MDO & Panchayat Secretary sanction paperwork',
+      'Bulk wholesale slab discounts on seasonal monsoon orders'
+    ],
+    displayOrder: 1,
+    isActive: true,
+  },
+  {
+    id: 'vector-control',
+    icon: 'ShieldAlert',
+    title: 'Emergency Vector & Epidemic Response Supplies',
+    teluguTitle: 'అత్యవసర సీజనల్ వ్యాధులు & దోమల నివారణ సరుకులు',
+    sla: 'Immediate 4-Hour Local Dispatches',
+    description: 'Rapid-deployment mosquito vector containment inventory maintained round-the-clock during monsoon surges. Equipped with ready-to-dispatch pulse-jet thermal fogging machines, Malathion 5% DP dusting powder, and Temephos 50% EC larvicide.',
+    features: [
+      'CIB & RC approved chemical formulations with lab test certificates',
+      'On-site operator machine startup and fuel mixing training',
+      'Emergency Sunday dispatch desk for seasonal dengue hot-spots',
+      'Batch assay certificates provided for government health audits'
+    ],
+    displayOrder: 2,
+    isActive: true,
+  },
+  {
+    id: 'civic-infra',
+    icon: 'Zap',
+    title: 'Civic Infrastructure & Public Illumination',
+    teluguTitle: 'పౌర మౌలిక సదుపాయాలు & వీధి దీపాలు',
+    sla: 'BIS Certified / 2-Year Warranty',
+    description: 'Heavy-duty LED streetlighting and civic landscaping materials engineered for high summer temperatures and volatile rural voltage. Sourced directly from premier manufacturing partners for EPC civil contractors and municipal engineers.',
+    features: [
+      'Die-cast aluminum IP66 fixtures with 10kV surge protection',
+      'Tested against 140V to 300V rural grid fluctuations',
+      '35mm UV-stabilized heavy landscape turf for public parks',
+      'Complete photometric reports and test certificates on request'
+    ],
+    displayOrder: 3,
+    isActive: true,
+  },
+  {
+    id: 'tender-compliance',
+    icon: 'FileCheck2',
+    title: 'e-Procurement & Audit Documentation Support',
+    teluguTitle: 'టెండర్లు & అధికారిక ప్రభుత్వ ఆడిట్ డాక్యుమెంటేషన్',
+    sla: '15-Minute Proforma Turnaround',
+    description: 'Eliminate procurement delays. We provide accurate GST-3B compliant proforma invoices, bid bond documentation, technical specification sheets, and bank remittance challans required for Treasury token approvals.',
+    features: [
+      'GSTIN 36CUHPK5939D1ZG registered regular taxpayer vendor',
+      'Accurate HSN coding for seamless input tax credit (ITC)',
+      'Treasury token and Gram Panchayat cheque acceptance',
+      'Authorized bid support for GeM and state e-Procurement portals'
+    ],
+    displayOrder: 4,
+    isActive: true,
+  }
+];
+
 interface ServicesScreenProps {
   onNavigate: (screen: Screen) => void;
   onOpenProforma: () => void;
@@ -32,65 +112,21 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
 }) => {
   const t = TRANSLATIONS[language];
   const [activeStep, setActiveStep] = useState(0);
+  const [services, setServices] = useState<ServiceItem[]>(DEFAULT_SERVICES);
 
-  const services = [
-    {
-      id: 'swachh-bharat',
-      icon: Truck,
-      title: 'Gram Panchayat Swachh Bharat Bulk Fulfillment',
-      teluguTitle: 'గ్రామ పంచాయతీ స్వచ్ఛ భారత్ బల్క్ సరఫరా',
-      sla: '24-48 Hr Statewide Dispatch',
-      desc: 'Dedicated supply pipeline for village sanitation drives, public health drains, and Swachh Telangana initiatives. We furnish tested Grade 1 bleaching powder (33% Cl), hydrated lime, and 240L SBM wheeled waste bins directly to Mandal headquarters and Gram Panchayat bhavans.',
-      features: [
-        'Guaranteed minimum 33% available chlorine in factory-sealed bags',
-        'Direct tractor/pickup truck unloading assistance',
-        'Formal MDO & Panchayat Secretary sanction paperwork',
-        'Bulk wholesale slab discounts on seasonal monsoon orders'
-      ]
-    },
-    {
-      id: 'vector-control',
-      icon: ShieldAlert,
-      title: 'Emergency Vector & Epidemic Response Supplies',
-      teluguTitle: 'అత్యవసర సీజనల్ వ్యాధులు & దోమల నివారణ సరుకులు',
-      sla: 'Immediate 4-Hour Local Dispatches',
-      desc: 'Rapid-deployment mosquito vector containment inventory maintained round-the-clock during monsoon surges. Equipped with ready-to-dispatch pulse-jet thermal fogging machines, Malathion 5% DP dusting powder, and Temephos 50% EC larvicide.',
-      features: [
-        'CIB & RC approved chemical formulations with lab test certificates',
-        'On-site operator machine startup and fuel mixing training',
-        'Emergency Sunday dispatch desk for seasonal dengue hot-spots',
-        'Batch assay certificates provided for government health audits'
-      ]
-    },
-    {
-      id: 'civic-infra',
-      icon: Zap,
-      title: 'Civic Infrastructure & Public Illumination',
-      teluguTitle: 'పౌర మౌలిక సదుపాయాలు & వీధి దీపాలు',
-      sla: 'BIS Certified / 2-Year Warranty',
-      desc: 'Heavy-duty LED streetlighting and civic landscaping materials engineered for high summer temperatures and volatile rural voltage. Sourced directly from premier manufacturing partners for EPC civil contractors and municipal engineers.',
-      features: [
-        'Die-cast aluminum IP66 fixtures with 10kV surge protection',
-        'Tested against 140V to 300V rural grid fluctuations',
-        '35mm UV-stabilized heavy landscape turf for public parks',
-        'Complete photometric reports and test certificates on request'
-      ]
-    },
-    {
-      id: 'tender-compliance',
-      icon: FileCheck2,
-      title: 'e-Procurement & Audit Documentation Support',
-      teluguTitle: 'టెండర్లు & అధికారిక ప్రభుత్వ ఆడిట్ డాక్యుమెంటేషన్',
-      sla: '15-Minute Proforma Turnaround',
-      desc: 'Eliminate procurement delays. We provide accurate GST-3B compliant proforma invoices, bid bond documentation, technical specification sheets, and bank remittance challans required for Treasury token approvals.',
-      features: [
-        'GSTIN 36CUHPK5939D1ZG registered regular taxpayer vendor',
-        'Accurate HSN coding for seamless input tax credit (ITC)',
-        'Treasury token and Gram Panchayat cheque acceptance',
-        'Authorized bid support for GeM and state e-Procurement portals'
-      ]
-    }
-  ];
+  useEffect(() => {
+    const loadServices = () => {
+      fetchServices({ activeOnly: true }).then((data) => {
+        if (data && data.length > 0) {
+          setServices(data);
+        }
+      });
+    };
+
+    loadServices();
+    window.addEventListener('knr_content_updated', loadServices);
+    return () => window.removeEventListener('knr_content_updated', loadServices);
+  }, []);
 
   const workflowSteps = [
     {
@@ -165,7 +201,13 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {services.map((service) => {
-            const Icon = service.icon;
+            const Icon =
+              typeof service.icon === 'string'
+                ? ICON_MAP[service.icon] || Truck
+                : (service.icon as unknown as React.ComponentType<{ className?: string }>) || Truck;
+            const descriptionText =
+              service.description || (service as unknown as { desc?: string }).desc || '';
+
             return (
               <div
                 key={service.id}
@@ -183,11 +225,11 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
                   </div>
 
                   <h3 className="text-lg sm:text-xl font-bold text-[#111827] tracking-tight font-display">
-                    {language === 'te' ? service.teluguTitle : service.title}
+                    {language === 'te' && service.teluguTitle ? service.teluguTitle : service.title}
                   </h3>
 
                   <p className="text-xs sm:text-sm text-[#64748B] mt-2.5 leading-relaxed">
-                    {service.desc}
+                    {descriptionText}
                   </p>
 
                   <div className="mt-5 pt-4 border-t border-slate-100 space-y-2">

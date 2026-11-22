@@ -75,6 +75,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   };
 
   const handleRemoveMain = () => {
+    if (!window.confirm('Are you sure you want to remove this image?')) return;
     if (galleryImages.length > 0 && onGalleryChange) {
       // Promote first gallery image to main
       onChange(galleryImages[0]);
@@ -196,33 +197,50 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         {/* Main Image */}
         {value ? (
           <div>
-            <div className="text-[11px] font-semibold text-slate-500 mb-1 flex items-center gap-1">
-              <span>Main Product Image</span>
-              <span className="text-blue-600 font-bold">(Primary)</span>
+            <div className="text-[11px] font-semibold text-slate-600 mb-1.5 flex items-center justify-between">
+              <span className="font-bold">{label} Preview</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-[11px] font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+                >
+                  Replace Image
+                </button>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={handleRemoveMain}
+                  className="text-[11px] font-bold text-rose-600 hover:text-rose-700 cursor-pointer"
+                >
+                  Remove
+                </button>
+              </div>
             </div>
-            <div className="relative group w-32 h-32 rounded-xl border-2 border-blue-500 overflow-hidden bg-slate-100 shadow-xs">
+            <div className="relative group w-48 sm:w-64 h-32 rounded-xl border-2 border-blue-500 overflow-hidden bg-slate-100 shadow-xs">
               <img
                 src={value}
-                alt="Main preview"
+                alt="Selected preview"
                 className="w-full h-full object-cover"
               />
               <button
                 type="button"
                 onClick={handleRemoveMain}
-                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md cursor-pointer"
-                title="Remove image"
+                className="absolute top-2 right-2 w-7 h-7 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-all shadow-md cursor-pointer"
+                title="Remove image (requires confirmation)"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" />
               </button>
-              <div className="absolute bottom-0 inset-x-0 bg-blue-600 text-white text-[10px] font-bold py-0.5 text-center">
-                Primary
+              <div className="absolute bottom-0 inset-x-0 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-bold py-1 px-2 flex items-center justify-between truncate">
+                <span className="truncate">{value.startsWith('data:') ? 'Uploaded base64 preview' : value.split('/').pop()}</span>
+                <span className="text-emerald-400 font-mono shrink-0 ml-1">Live</span>
               </div>
             </div>
           </div>
         ) : (
           <div className="flex items-center gap-2 p-3 bg-slate-100 rounded-xl text-xs text-slate-500">
             <ImageIcon className="w-4 h-4 text-slate-400" />
-            <span>No main image selected.</span>
+            <span>No image selected yet. Upload a file above or enter a public URL.</span>
           </div>
         )}
 
