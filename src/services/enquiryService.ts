@@ -35,15 +35,22 @@ function mapDbEnquiry(row: Record<string, unknown>, items: EnquiryItem[] = []): 
     items: items,
     createdAt: String(row.created_at || new Date().toISOString()),
     updatedAt: row.updated_at ? String(row.updated_at) : undefined,
+    deletedAt: row.deleted_at ? String(row.deleted_at) : null,
+    deletedBy: row.deleted_by ? String(row.deleted_by) : null,
+    deletionReason: row.deletion_reason ? String(row.deletion_reason) : null,
+    restoredAt: row.restored_at ? String(row.restored_at) : null,
+    restoredBy: row.restored_by ? String(row.restored_by) : null,
   };
 }
 
-function getInitialLocalEnquiries(): CustomerEnquiry[] {
+function getInitialLocalEnquiries(includeDeleted: boolean = false): CustomerEnquiry[] {
   try {
     const saved = localStorage.getItem(ENQUIRIES_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        return includeDeleted ? parsed : parsed.filter((e) => !e.deletedAt);
+      }
     }
   } catch {
     // fallback
@@ -52,13 +59,15 @@ function getInitialLocalEnquiries(): CustomerEnquiry[] {
   return [];
 }
 
-export async function fetchEnquiries(): Promise<CustomerEnquiry[]> {
+export async function fetchEnquiries(options?: { includeDeleted?: boolean }): Promise<CustomerEnquiry[]> {
+  const includeDeleted = options?.includeDeleted ?? false;
   if (isSupabaseConfigured()) {
     try {
-      const { data: enqData, error: enqError } = await supabase
-        .from('enquiries')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('enquiries').select('*');
+      if (!includeDeleted) {
+        query = query.is('deleted_at', null);
+      }
+      const { data: enqData, error: enqError } = await query.order('created_at', { ascending: false });
 
       if (enqError) throw enqError;
 
@@ -302,21 +311,162 @@ export async function updateEnquiryStatus(
 }
 
 /**
- * Delete enquiry safely
+ * Move enquiry to Recycle Bin (Soft Delete with 30-day retention)
  */
-export async function deleteEnquiry(id: string): Promise<boolean> {
+export async function moveToRecycleBin(
+  id: string,
+  deletedBy: string = 'Administrator',
+  reason: string = 'Moved to Recycle Bin'
+): Promise<boolean> {
+  const now = new Date().toISOString();
+
   if (isSupabaseConfigured()) {
     try {
-      await supabase.from('enquiries').delete().eq('id', id);
+      // Soft delete enquiry
+      await supabase
+        .from('enquiries')
+        .update({
+          deleted_at: now,
+          deleted_by: deletedBy,
+          deletion_reason: reason,
+        })
+        .eq('id', id);
+
+      // Soft delete associated confirmed order if any exists
+      await supabase
+        .from('confirmed_orders')
+        .update({
+          deleted_at: now,
+          deleted_by: deletedBy,
+          deletion_reason: reason,
+        })
+        .eq('enquiry_id', id);
     } catch (err) {
-      console.warn('Failed to delete enquiry from Supabase:', err);
+      console.warn('Failed to soft delete enquiry in Supabase:', err);
     }
   }
 
-  const current = getInitialLocalEnquiries();
+  const current = getInitialLocalEnquiries(true);
+  const updated = current.map((e) =>
+    e.id === id
+      ? { ...e, deletedAt: now, deletedBy, deletionReason: reason }
+      : e
+  );
+  localStorage.setItem(ENQUIRIES_STORAGE_KEY, JSON.stringify(updated));
+
+  // Also update local confirmed orders if stored locally
+  try {
+    const cachedOrders = localStorage.getItem('knr_confirmed_orders_store');
+    if (cachedOrders) {
+      const ords = JSON.parse(cachedOrders);
+      const updatedOrds = ords.map((o: any) =>
+        o.enquiryId === id ? { ...o, deletedAt: now, deletedBy, deletionReason: reason } : o
+      );
+      localStorage.setItem('knr_confirmed_orders_store', JSON.stringify(updatedOrds));
+    }
+  } catch {
+    // ignore
+  }
+
+  window.dispatchEvent(new CustomEvent('knr_enquiries_updated'));
+  window.dispatchEvent(new CustomEvent('knr_orders_updated'));
+  window.dispatchEvent(new CustomEvent('knr_recycle_bin_updated'));
+  return true;
+}
+
+/**
+ * Restore an enquiry from the Recycle Bin
+ */
+export async function restoreEnquiry(
+  id: string,
+  restoredBy: string = 'Administrator'
+): Promise<boolean> {
+  const now = new Date().toISOString();
+
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase
+        .from('enquiries')
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+          restored_at: now,
+          restored_by: restoredBy,
+        })
+        .eq('id', id);
+
+      // Also restore associated confirmed orders if any
+      await supabase
+        .from('confirmed_orders')
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+          restored_at: now,
+          restored_by: restoredBy,
+        })
+        .eq('enquiry_id', id);
+    } catch (err) {
+      console.warn('Failed to restore enquiry in Supabase:', err);
+    }
+  }
+
+  const current = getInitialLocalEnquiries(true);
+  const updated = current.map((e) =>
+    e.id === id
+      ? { ...e, deletedAt: null, deletedBy: null, restoredAt: now, restoredBy }
+      : e
+  );
+  localStorage.setItem(ENQUIRIES_STORAGE_KEY, JSON.stringify(updated));
+
+  try {
+    const cachedOrders = localStorage.getItem('knr_confirmed_orders_store');
+    if (cachedOrders) {
+      const ords = JSON.parse(cachedOrders);
+      const updatedOrds = ords.map((o: any) =>
+        o.enquiryId === id ? { ...o, deletedAt: null, deletedBy: null, restoredAt: now, restoredBy } : o
+      );
+      localStorage.setItem('knr_confirmed_orders_store', JSON.stringify(updatedOrds));
+    }
+  } catch {
+    // ignore
+  }
+
+  window.dispatchEvent(new CustomEvent('knr_enquiries_updated'));
+  window.dispatchEvent(new CustomEvent('knr_orders_updated'));
+  window.dispatchEvent(new CustomEvent('knr_recycle_bin_updated'));
+  return true;
+}
+
+/**
+ * Permanently delete an enquiry and exclusively associated line items
+ */
+export async function permanentlyDeleteEnquiry(id: string): Promise<boolean> {
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase.from('enquiry_items').delete().eq('enquiry_id', id);
+      await supabase.from('enquiry_status_history').delete().eq('enquiry_id', id);
+      await supabase.from('communication_logs').delete().eq('enquiry_id', id);
+      await supabase.from('confirmed_orders').delete().eq('enquiry_id', id);
+      await supabase.from('enquiries').delete().eq('id', id);
+    } catch (err) {
+      console.warn('Failed to permanently delete enquiry from Supabase:', err);
+    }
+  }
+
+  const current = getInitialLocalEnquiries(true);
   const filtered = current.filter((e) => e.id !== id);
   localStorage.setItem(ENQUIRIES_STORAGE_KEY, JSON.stringify(filtered));
+
   window.dispatchEvent(new CustomEvent('knr_enquiries_updated'));
+  window.dispatchEvent(new CustomEvent('knr_orders_updated'));
+  window.dispatchEvent(new CustomEvent('knr_recycle_bin_updated'));
   return true;
+}
+
+/**
+ * Backward-compatible deleteEnquiry: performs safe soft-delete into Recycle Bin
+ */
+export async function deleteEnquiry(id: string, deletedBy?: string): Promise<boolean> {
+  return moveToRecycleBin(id, deletedBy);
 }
 

@@ -24,6 +24,7 @@ import { fetchProducts, formatINR } from '../../services/productService';
 import { fetchCategories } from '../../services/categoryService';
 import { fetchEnquiries } from '../../services/enquiryService';
 import { fetchConfirmedOrders, fetchQuotations } from '../../services/quotationService';
+import { triggerAutomatic30DayCleanup } from '../../services/recycleBinService';
 import { formatISTDateTime, formatRelativeTime } from '../../utils/date';
 import { getCustomerDedupKey } from '../../utils/customer';
 
@@ -71,6 +72,8 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
 
   useEffect(() => {
     loadData();
+    // Trigger automated 30-day cleanup of expired soft-deleted records
+    triggerAutomatic30DayCleanup().catch(console.warn);
 
     const handleUpdate = () => loadData();
     window.addEventListener('knr_products_updated', handleUpdate);
@@ -78,6 +81,7 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
     window.addEventListener('knr_categories_updated', handleUpdate);
     window.addEventListener('knr_orders_updated', handleUpdate);
     window.addEventListener('knr_quotations_updated', handleUpdate);
+    window.addEventListener('knr_recycle_bin_updated', handleUpdate);
 
     return () => {
       window.removeEventListener('knr_products_updated', handleUpdate);
@@ -85,6 +89,7 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
       window.removeEventListener('knr_categories_updated', handleUpdate);
       window.removeEventListener('knr_orders_updated', handleUpdate);
       window.removeEventListener('knr_quotations_updated', handleUpdate);
+      window.removeEventListener('knr_recycle_bin_updated', handleUpdate);
     };
   }, []);
 
@@ -105,42 +110,56 @@ export const DashboardOverviewPage: React.FC<DashboardOverviewPageProps> = ({
 
   const totalCategories = categories.length;
 
+  // Active (non-deleted) enquiries set
+  const activeEnquiries = useMemo(() => {
+    return enquiries.filter((e) => !e.deletedAt);
+  }, [enquiries]);
+
+  // Active (non-deleted) confirmed orders set
+  const activeOrders = useMemo(() => {
+    return confirmedOrders.filter((o) => !o.deletedAt);
+  }, [confirmedOrders]);
+
   // 2. Unique Customers (Deduplicated with normalized 10-digit phone, email, or entity name)
+  // Strictly counts distinct customers who have at least one active, non-deleted enquiry or confirmed order
   const totalCustomers = useMemo(() => {
     const customerKeys = new Set<string>();
-    enquiries.forEach((e) => {
+    activeEnquiries.forEach((e) => {
       const key = getCustomerDedupKey(e);
       if (key) customerKeys.add(key);
     });
-    confirmedOrders.forEach((o) => {
+    activeOrders.forEach((o) => {
       const key = getCustomerDedupKey(o);
       if (key) customerKeys.add(key);
     });
     return customerKeys.size;
-  }, [enquiries, confirmedOrders]);
+  }, [activeEnquiries, activeOrders]);
 
-  // 3. RFQ & Order Pipeline Statistics (Computed from real enquiries and orders)
-  const totalEnquiries = enquiries.length;
-  const newEnquiries = enquiries.filter((e) => e.status === 'New').length;
-  const pendingQuotations = enquiries.filter(
+  // 3. RFQ & Order Pipeline Statistics (Computed strictly from active, non-deleted records)
+  const totalEnquiries = activeEnquiries.length;
+  const newEnquiries = activeEnquiries.filter((e) => e.status === 'New').length;
+  const pendingQuotations = activeEnquiries.filter(
     (e) => e.status === 'Quotation Preparing' || e.status === 'Contacted'
   ).length;
 
-  // Verified against actual quotation communication records and status
+  // Verified against actual quotation communication records and status (excluding deleted)
   const quotationsSent = useMemo(() => {
     const sentQuotations = quotations.filter(
-      (q) => q.status === 'Sent' || q.status === 'Accepted'
+      (q) => !q.deletedAt && (q.status === 'Sent' || q.status === 'Accepted')
     );
     if (sentQuotations.length > 0) {
       return sentQuotations.length;
     }
-    return enquiries.filter((e) => e.status === 'Quotation Sent').length;
-  }, [quotations, enquiries]);
+    return activeEnquiries.filter((e) => e.status === 'Quotation Sent').length;
+  }, [quotations, activeEnquiries]);
 
-  // Confirmed orders count actual confirmed order records from confirmed_orders table
-  const confirmedOrdersCount = confirmedOrders.length;
+  // Confirmed orders count actual active confirmed order records from confirmed_orders table
+  // Excludes records moved to Recycle Bin (deletedAt IS NOT NULL); counts only status === 'Confirmed'
+  const confirmedOrdersCount = useMemo(() => {
+    return activeOrders.filter((o) => o.status === 'Confirmed').length;
+  }, [activeOrders]);
 
-  const lostEnquiries = enquiries.filter(
+  const lostEnquiries = activeEnquiries.filter(
     (e) => e.status === 'Lost' || e.status === 'Rejected'
   ).length;
 

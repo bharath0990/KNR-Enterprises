@@ -11,6 +11,7 @@ interface AdminLayoutProps {
   children: ReactNode;
   enquiriesCount?: number;
   lowStockCount?: number;
+  recycleBinCount?: number;
   onOpenNotificationReference?: (referenceId: string, referenceTab?: AdminTab) => void;
 }
 
@@ -22,6 +23,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   children,
   enquiriesCount = 0,
   lowStockCount = 0,
+  recycleBinCount = 0,
   onOpenNotificationReference,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -39,6 +41,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           onLogout={onLogout}
           enquiriesCount={enquiriesCount}
           lowStockCount={lowStockCount}
+          recycleBinCount={recycleBinCount}
           adminName={user?.fullName}
           adminRole={user?.role}
         />
@@ -65,6 +68,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
               onLogout={onLogout}
               enquiriesCount={enquiriesCount}
               lowStockCount={lowStockCount}
+              recycleBinCount={recycleBinCount}
               adminName={user?.fullName}
               adminRole={user?.role}
             />

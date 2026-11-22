@@ -7,6 +7,7 @@ export type AdminTab =
   | 'products'
   | 'enquiries'
   | 'customers'
+  | 'recycle-bin'
   | 'website-control'
   | 'settings'
   // Backward compatible subviews
@@ -142,6 +143,11 @@ export interface CustomerEnquiry {
   items?: EnquiryItem[];
   createdAt: string;
   updatedAt?: string;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
+  deletionReason?: string | null;
+  restoredAt?: string | null;
+  restoredBy?: string | null;
 }
 
 export type QuotationStatus = 'Draft' | 'Sent' | 'Revised' | 'Accepted' | 'Declined' | 'Expired';
@@ -182,6 +188,11 @@ export interface Quotation {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
+  deletionReason?: string | null;
+  restoredAt?: string | null;
+  restoredBy?: string | null;
 }
 
 export interface QuotationItem {
@@ -244,6 +255,30 @@ export interface ConfirmedOrder {
   status: 'Confirmed' | 'Dispatched' | 'Completed' | 'Cancelled';
   createdBy: string;
   createdAt: string;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
+  deletionReason?: string | null;
+  restoredAt?: string | null;
+  restoredBy?: string | null;
+}
+
+export interface RecycleBinItem {
+  id: string;
+  referenceId: string; // RFQ ID (e.g. KNR-RFQ-...) or Order ID (e.g. KNR-ORD-...)
+  customerName: string;
+  mobileNumber: string;
+  email?: string;
+  organisation?: string;
+  recordType: 'Enquiry' | 'RFQ' | 'Confirmed Order';
+  originalStatus: string;
+  totalAmount: number;
+  deletedAt: string;
+  deletedBy?: string;
+  deletionReason?: string;
+  daysRemaining: number;
+  isWarning: boolean;
+  rawEnquiry?: CustomerEnquiry;
+  rawOrder?: ConfirmedOrder;
 }
 
 export interface RfqSubmissionPayload {

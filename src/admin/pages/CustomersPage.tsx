@@ -58,7 +58,13 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({ onViewEnquiry }) =
   useEffect(() => {
     loadData();
     window.addEventListener('knr_enquiries_updated', loadData);
-    return () => window.removeEventListener('knr_enquiries_updated', loadData);
+    window.addEventListener('knr_orders_updated', loadData);
+    window.addEventListener('knr_recycle_bin_updated', loadData);
+    return () => {
+      window.removeEventListener('knr_enquiries_updated', loadData);
+      window.removeEventListener('knr_orders_updated', loadData);
+      window.removeEventListener('knr_recycle_bin_updated', loadData);
+    };
   }, []);
 
   // Aggregate enquiries by normalized phone number or customer name

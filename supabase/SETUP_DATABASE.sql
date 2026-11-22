@@ -1475,6 +1475,100 @@ BEGIN
     END IF;
 END $$;
 
+-- ==============================================================================
+-- 20. RECYCLE BIN & 30-DAY SOFT DELETION SYSTEM
+-- ==============================================================================
+ALTER TABLE public.enquiries 
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS deleted_by TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS deletion_reason TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS restored_at TIMESTAMPTZ DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS restored_by TEXT DEFAULT NULL;
+
+ALTER TABLE public.confirmed_orders 
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS deleted_by TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS deletion_reason TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS restored_at TIMESTAMPTZ DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS restored_by TEXT DEFAULT NULL;
+
+ALTER TABLE public.quotations 
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS deleted_by TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS deletion_reason TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS restored_at TIMESTAMPTZ DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS restored_by TEXT DEFAULT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_enquiries_deleted_at ON public.enquiries(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_confirmed_orders_deleted_at ON public.confirmed_orders(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_quotations_deleted_at ON public.quotations(deleted_at);
+
+CREATE OR REPLACE FUNCTION public.cleanup_expired_recycle_bin()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    deleted_enquiries_count INT := 0;
+    deleted_orders_count INT := 0;
+    deleted_quotations_count INT := 0;
+    cutoff_time TIMESTAMPTZ := NOW() - INTERVAL '30 days';
+BEGIN
+    DELETE FROM public.enquiry_items
+    WHERE enquiry_id IN (
+        SELECT id FROM public.enquiries WHERE deleted_at IS NOT NULL AND deleted_at < cutoff_time
+    );
+
+    DELETE FROM public.enquiry_status_history
+    WHERE enquiry_id IN (
+        SELECT id FROM public.enquiries WHERE deleted_at IS NOT NULL AND deleted_at < cutoff_time
+    );
+
+    DELETE FROM public.communication_logs
+    WHERE enquiry_id IN (
+        SELECT id FROM public.enquiries WHERE deleted_at IS NOT NULL AND deleted_at < cutoff_time
+    );
+
+    WITH del_orders AS (
+        DELETE FROM public.confirmed_orders
+        WHERE deleted_at IS NOT NULL AND deleted_at < cutoff_time
+        RETURNING id
+    )
+    SELECT COUNT(*) INTO deleted_orders_count FROM del_orders;
+
+    DELETE FROM public.quotation_items
+    WHERE quotation_id IN (
+        SELECT id FROM public.quotations WHERE deleted_at IS NOT NULL AND deleted_at < cutoff_time
+    );
+
+    WITH del_quots AS (
+        DELETE FROM public.quotations
+        WHERE deleted_at IS NOT NULL AND deleted_at < cutoff_time
+        RETURNING id
+    )
+    SELECT COUNT(*) INTO deleted_quotations_count FROM del_quots;
+
+    WITH del_enqs AS (
+        DELETE FROM public.enquiries
+        WHERE deleted_at IS NOT NULL AND deleted_at < cutoff_time
+        RETURNING id
+    )
+    SELECT COUNT(*) INTO deleted_enquiries_count FROM del_enqs;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'cutoff_time', cutoff_time,
+        'deleted_enquiries', deleted_enquiries_count,
+        'deleted_orders', deleted_orders_count,
+        'deleted_quotations', deleted_quotations_count
+    );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.cleanup_expired_recycle_bin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.cleanup_expired_recycle_bin() TO service_role;
+
+
 
 
 

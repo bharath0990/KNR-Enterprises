@@ -40,6 +40,7 @@ const tabTitles: Record<AdminTab, string> = {
   products: 'Product Management',
   enquiries: 'Customer RFQ Enquiries',
   customers: 'Customer Directory',
+  'recycle-bin': 'Recycle Bin & 30-Day Recovery',
   'website-control': 'Website Control (CMS)',
   settings: 'System & Platform Settings',
   categories: 'Category Management',

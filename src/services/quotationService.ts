@@ -82,13 +82,19 @@ export function generateQuotationNumber(index: number = 1): string {
 // 3. QUOTATION SERVICE OPERATIONS
 // ============================================================================
 
-export async function fetchQuotations(enquiryId?: string): Promise<Quotation[]> {
+export async function fetchQuotations(enquiryId?: string, options?: { includeDeleted?: boolean }): Promise<Quotation[]> {
+  const includeDeleted = options?.includeDeleted ?? false;
   if (isSupabaseConfigured()) {
     try {
       let query = supabase
         .from('quotations')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+
+      if (!includeDeleted) {
+        query = query.is('deleted_at', null);
+      }
+
+      query = query.order('created_at', { ascending: false });
 
       if (enquiryId) {
         query = query.eq('enquiry_id', enquiryId);
@@ -715,13 +721,15 @@ export async function confirmOrder(
   return newOrder;
 }
 
-export async function fetchConfirmedOrders(): Promise<ConfirmedOrder[]> {
+export async function fetchConfirmedOrders(options?: { includeDeleted?: boolean }): Promise<ConfirmedOrder[]> {
+  const includeDeleted = options?.includeDeleted ?? false;
   if (isSupabaseConfigured()) {
     try {
-      const { data, error } = await supabase
-        .from('confirmed_orders')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('confirmed_orders').select('*');
+      if (!includeDeleted) {
+        query = query.is('deleted_at', null);
+      }
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       if (data) {
@@ -740,6 +748,11 @@ export async function fetchConfirmedOrders(): Promise<ConfirmedOrder[]> {
           status: d.status,
           createdBy: d.created_by,
           createdAt: d.created_at,
+          deletedAt: d.deleted_at || null,
+          deletedBy: d.deleted_by || null,
+          deletionReason: d.deletion_reason || null,
+          restoredAt: d.restored_at || null,
+          restoredBy: d.restored_by || null,
         }));
       }
     } catch (err) {
@@ -748,7 +761,161 @@ export async function fetchConfirmedOrders(): Promise<ConfirmedOrder[]> {
   }
 
   const cached = localStorage.getItem(ORDERS_STORAGE_KEY);
-  return cached ? JSON.parse(cached) : [];
+  const list: ConfirmedOrder[] = cached ? JSON.parse(cached) : [];
+  return includeDeleted ? list : list.filter((o) => !o.deletedAt);
+}
+
+/**
+ * Move a confirmed order to the Recycle Bin (soft delete)
+ */
+export async function moveToRecycleBinOrder(
+  id: string,
+  deletedBy: string = 'Administrator',
+  reason: string = 'Moved to Recycle Bin'
+): Promise<boolean> {
+  const now = new Date().toISOString();
+
+  if (isSupabaseConfigured()) {
+    try {
+      // Find order to see if it has an enquiryId
+      const { data: ord } = await supabase
+        .from('confirmed_orders')
+        .select('enquiry_id')
+        .eq('id', id)
+        .single();
+
+      await supabase
+        .from('confirmed_orders')
+        .update({
+          deleted_at: now,
+          deleted_by: deletedBy,
+          deletion_reason: reason,
+        })
+        .eq('id', id);
+
+      if (ord?.enquiry_id) {
+        await supabase
+          .from('enquiries')
+          .update({
+            deleted_at: now,
+            deleted_by: deletedBy,
+            deletion_reason: reason,
+          })
+          .eq('id', ord.enquiry_id);
+      }
+    } catch (err) {
+      console.warn('Failed to soft delete confirmed order in Supabase:', err);
+    }
+  }
+
+  try {
+    const cached = localStorage.getItem(ORDERS_STORAGE_KEY);
+    if (cached) {
+      const list: ConfirmedOrder[] = JSON.parse(cached);
+      const updated = list.map((o) =>
+        o.id === id ? { ...o, deletedAt: now, deletedBy, deletionReason: reason } : o
+      );
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updated));
+    }
+  } catch {
+    // ignore
+  }
+
+  window.dispatchEvent(new CustomEvent('knr_orders_updated'));
+  window.dispatchEvent(new CustomEvent('knr_enquiries_updated'));
+  window.dispatchEvent(new CustomEvent('knr_recycle_bin_updated'));
+  return true;
+}
+
+/**
+ * Restore a confirmed order from the Recycle Bin
+ */
+export async function restoreConfirmedOrder(
+  id: string,
+  restoredBy: string = 'Administrator'
+): Promise<boolean> {
+  const now = new Date().toISOString();
+
+  if (isSupabaseConfigured()) {
+    try {
+      const { data: ord } = await supabase
+        .from('confirmed_orders')
+        .select('enquiry_id')
+        .eq('id', id)
+        .single();
+
+      await supabase
+        .from('confirmed_orders')
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+          restored_at: now,
+          restored_by: restoredBy,
+        })
+        .eq('id', id);
+
+      if (ord?.enquiry_id) {
+        await supabase
+          .from('enquiries')
+          .update({
+            deleted_at: null,
+            deleted_by: null,
+            restored_at: now,
+            restored_by: restoredBy,
+          })
+          .eq('id', ord.enquiry_id);
+      }
+    } catch (err) {
+      console.warn('Failed to restore confirmed order in Supabase:', err);
+    }
+  }
+
+  try {
+    const cached = localStorage.getItem(ORDERS_STORAGE_KEY);
+    if (cached) {
+      const list: ConfirmedOrder[] = JSON.parse(cached);
+      const updated = list.map((o) =>
+        o.id === id ? { ...o, deletedAt: null, deletedBy: null, restoredAt: now, restoredBy } : o
+      );
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updated));
+    }
+  } catch {
+    // ignore
+  }
+
+  window.dispatchEvent(new CustomEvent('knr_orders_updated'));
+  window.dispatchEvent(new CustomEvent('knr_enquiries_updated'));
+  window.dispatchEvent(new CustomEvent('knr_recycle_bin_updated'));
+  return true;
+}
+
+/**
+ * Permanently delete a confirmed order
+ */
+export async function permanentDeleteConfirmedOrder(id: string): Promise<boolean> {
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase.from('confirmed_orders').delete().eq('id', id);
+    } catch (err) {
+      console.warn('Failed to permanently delete confirmed order from Supabase:', err);
+    }
+  }
+
+  try {
+    const cached = localStorage.getItem(ORDERS_STORAGE_KEY);
+    if (cached) {
+      const list: ConfirmedOrder[] = JSON.parse(cached);
+      const filtered = list.filter((o) => o.id !== id);
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(filtered));
+    }
+  } catch {
+    // ignore
+  }
+
+  window.dispatchEvent(new CustomEvent('knr_orders_updated'));
+  window.dispatchEvent(new CustomEvent('knr_enquiries_updated'));
+  window.dispatchEvent(new CustomEvent('knr_recycle_bin_updated'));
+  return true;
 }
 
 // Helper DB mapper
@@ -788,6 +955,11 @@ function mapDbToQuotation(row: any): Quotation {
     createdBy: row.created_by || 'Administrator',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    deletedAt: row.deleted_at || null,
+    deletedBy: row.deleted_by || null,
+    deletionReason: row.deletion_reason || null,
+    restoredAt: row.restored_at || null,
+    restoredBy: row.restored_by || null,
   };
 }
 

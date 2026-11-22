@@ -41,6 +41,7 @@ import {
   fetchEnquiries,
   updateEnquiryStatus,
   deleteEnquiry,
+  moveToRecycleBin,
 } from '../../services/enquiryService';
 import {
   fetchQuotations,
@@ -48,7 +49,9 @@ import {
   fetchStatusHistory,
   fetchCommunicationLogs,
   addStatusHistory,
+  fetchConfirmedOrders,
 } from '../../services/quotationService';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { downloadQuotationPdf } from '../../services/pdfService';
 import { formatINR } from '../../services/productService';
 import { formatISTDateTime, formatISTDate, formatRelativeTime } from '../../utils/date';
@@ -166,6 +169,32 @@ export const EnquiriesPage: React.FC<EnquiriesPageProps> = ({ initialSelectedEnq
       const prevStatus = selectedEnquiry.status;
       const updated = await updateEnquiryStatus(selectedEnquiry.id, modalStatus, modalNotes);
 
+      // If status changed to Order Confirmed, ensure a matching confirmed_orders row exists
+      if (modalStatus === 'Order Confirmed' && prevStatus !== 'Order Confirmed') {
+        const existingOrders = await fetchConfirmedOrders({ includeDeleted: true });
+        const alreadyExists = existingOrders.some((o) => o.enquiryId === selectedEnquiry.id);
+        if (!alreadyExists) {
+          const year = new Date().getFullYear();
+          const orderNumber = `KNR-ORD-${year}-${Math.floor(1000 + Math.random() * 9000)}`;
+          if (isSupabaseConfigured()) {
+            await supabase.from('confirmed_orders').insert({
+              order_number: orderNumber,
+              enquiry_id: selectedEnquiry.id,
+              customer_name: selectedEnquiry.customerName,
+              mobile_number: selectedEnquiry.mobileNumber,
+              email: selectedEnquiry.email,
+              organisation: selectedEnquiry.organisation,
+              delivery_address: selectedEnquiry.address,
+              total_amount: selectedEnquiry.totalAmount,
+              agreed_quantities_summary: `Confirmed Order for RFQ #${selectedEnquiry.enquiryNumber}`,
+              status: 'Confirmed',
+              created_by: 'Administrator',
+            });
+          }
+          window.dispatchEvent(new CustomEvent('knr_orders_updated'));
+        }
+      }
+
       // Add to status history
       if (prevStatus !== modalStatus) {
         await addStatusHistory(
@@ -251,7 +280,7 @@ export const EnquiriesPage: React.FC<EnquiriesPageProps> = ({ initialSelectedEnq
 
   const handleConfirmDelete = async () => {
     if (!deleteCandidate) return;
-    await deleteEnquiry(deleteCandidate.id);
+    await moveToRecycleBin(deleteCandidate.id);
     setEnquiries((prev) => prev.filter((e) => e.id !== deleteCandidate.id));
     if (selectedEnquiry?.id === deleteCandidate.id) {
       setSelectedEnquiry(null);
@@ -953,11 +982,11 @@ export const EnquiriesPage: React.FC<EnquiriesPageProps> = ({ initialSelectedEnq
       {/* Delete Confirmation */}
       <ConfirmModal
         isOpen={Boolean(deleteCandidate)}
-        title="Delete Customer Enquiry"
-        message={`Delete RFQ record "${deleteCandidate?.enquiryNumber}"? This will remove the inquiry record.`}
-        confirmText="Delete Enquiry"
+        title="Move this record to Recycle Bin?"
+        message="This record can be restored within 30 days. After that, it will be permanently deleted."
+        confirmText="Move to Recycle Bin"
         cancelText="Cancel"
-        isDestructive={true}
+        isDestructive={false}
         onConfirm={handleConfirmDelete}
         onClose={() => setDeleteCandidate(null)}
       />

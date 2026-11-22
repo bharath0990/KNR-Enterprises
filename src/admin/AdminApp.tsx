@@ -11,8 +11,10 @@ import { CustomersPage } from './pages/CustomersPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { WebsiteControlPage, WebsiteControlSubtab } from './pages/WebsiteControlPage';
 import { SettingsPage, SettingsSubtab } from './pages/SettingsPage';
+import { RecycleBinPage } from './pages/RecycleBinPage';
 import { fetchEnquiries } from '../services/enquiryService';
 import { fetchProducts } from '../services/productService';
+import { fetchRecycleBinItems } from '../services/recycleBinService';
 
 interface AdminAppProps {
   onBackToWebsite: () => void;
@@ -30,6 +32,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
       'products',
       'enquiries',
       'customers',
+      'recycle-bin',
       'website-control',
       'settings',
       'categories',
@@ -63,6 +66,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
   // Badge notification counts
   const [enquiriesCount, setEnquiriesCount] = useState<number>(0);
   const [lowStockCount, setLowStockCount] = useState<number>(0);
+  const [recycleBinCount, setRecycleBinCount] = useState<number>(0);
 
   // Sync hash with currentTab
   const handleSelectTab = (tab: AdminTab) => {
@@ -119,9 +123,10 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
 
     const loadCounts = async () => {
       try {
-        const [enq, prods] = await Promise.all([
+        const [enq, prods, binItems] = await Promise.all([
           fetchEnquiries(),
           fetchProducts(),
+          fetchRecycleBinItems(),
         ]);
         const pending = enq.filter((e) => e.status === 'New' || e.status === 'Contacted').length;
         setEnquiriesCount(pending);
@@ -131,6 +136,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
           return s <= (p.lowStockThreshold ?? 10);
         }).length;
         setLowStockCount(low);
+        setRecycleBinCount(binItems.length);
       } catch {
         // ignore
       }
@@ -140,10 +146,12 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
     const handleUpdate = () => loadCounts();
     window.addEventListener('knr_enquiries_updated', handleUpdate);
     window.addEventListener('knr_products_updated', handleUpdate);
+    window.addEventListener('knr_recycle_bin_updated', handleUpdate);
 
     return () => {
       window.removeEventListener('knr_enquiries_updated', handleUpdate);
       window.removeEventListener('knr_products_updated', handleUpdate);
+      window.removeEventListener('knr_recycle_bin_updated', handleUpdate);
     };
   }, [isAuthenticated]);
 
@@ -184,6 +192,7 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
       }}
       enquiriesCount={enquiriesCount}
       lowStockCount={lowStockCount}
+      recycleBinCount={recycleBinCount}
       onOpenNotificationReference={handleOpenNotificationReference}
     >
       {/* 1. Dashboard Overview */}
@@ -242,6 +251,11 @@ export const AdminApp: React.FC<AdminAppProps> = ({ onBackToWebsite }) => {
             setCurrentTab('enquiries');
           }}
         />
+      )}
+
+      {/* 5. Recycle Bin (30-day retention & recovery) */}
+      {currentTab === 'recycle-bin' && (
+        <RecycleBinPage adminName={user?.fullName} />
       )}
 
       {/* 5. Website Control (CMS) */}

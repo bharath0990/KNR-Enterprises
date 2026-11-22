@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  Trash2,
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 
@@ -30,6 +31,7 @@ interface AdminSidebarProps {
   onLogout: () => void;
   enquiriesCount?: number;
   lowStockCount?: number;
+  recycleBinCount?: number;
   adminName?: string;
   adminRole?: string;
 }
@@ -42,6 +44,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   onLogout,
   enquiriesCount = 0,
   lowStockCount = 0,
+  recycleBinCount = 0,
   adminName = 'Depot Administrator',
   adminRole = 'Administrator',
 }) => {
@@ -67,6 +70,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       id: 'customers' as AdminTab,
       label: 'Customers',
       icon: Users,
+    },
+    {
+      id: 'recycle-bin' as AdminTab,
+      label: 'Recycle Bin',
+      icon: Trash2,
+      badge: recycleBinCount > 0 ? String(recycleBinCount) : undefined,
+      badgeColor: 'bg-amber-100 text-amber-800 font-bold',
     },
     {
       id: 'website-control' as AdminTab,
